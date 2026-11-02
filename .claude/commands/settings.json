@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv:*)", "Bash(uvx:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(pytest:*)",
+      "Bash(ruff:*)", "Bash(psr:*)", "Bash(git add:*)", "Bash(git commit:*)",
+      "Bash(git push:*)", "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+      "Bash(git pull:*)", "Bash(docker:*)", "Bash(terraform fmt:*)", "Bash(terraform init:*)",
+      "Bash(terraform validate:*)", "Bash(curl:*)", "Bash(nohup:*)", "Bash(tail:*)",
+      "Bash(ls:*)", "Bash(mkdir:*)"
+    ],
+    "deny": [
+      "Bash(terraform apply:*)", "Bash(terraform destroy:*)", "Bash(git push --force:*)",
+      "Read(./.env)"
+    ]
+  }
+}
