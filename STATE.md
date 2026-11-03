@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **C** (cloud sessions: code, tests, real-data runs, Docker, `terraform validate`)
-Next: **chunk 2 (P1)**
+Next: **chunk 3 (P2, P3)**
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -23,7 +23,7 @@ Between chunks: new session, `/check`, then `/build`.
 ## Stage C
 - [x] P0 Scaffold + data (repaired 2026-11-03: the `data/` ignore line had kept the
   `src/product_search_ranker/data/` package out of git; now `/data/`, package committed)
-- [ ] P1 Metrics, statistics, BM25, eval runner
+- [x] P1 Metrics, statistics, BM25, eval runner
 - [ ] P2 Dense retrieval + hybrid (RRF)
 - [ ] P3 Learning-to-rank + MLflow
 - [ ] P4 LLM client + query understanding
@@ -41,7 +41,20 @@ Between chunks: new session, `/check`, then `/build`.
 
 ## Results so far
 Filled from `reports/metrics.json` after each run (system, locale, NDCG@10, 95% CI).
-No system has been evaluated yet.
+Test split, 2026-11-03. No query was excluded (`n_excluded` = 0 everywhere).
+
+| System | Locale | NDCG@10 | 95% CI | MRR | Queries |
+|---|---|---|---|---|---|
+| bm25 | us | 0.6997 | [0.6952, 0.704] | 0.7567 | 8,956 |
+| bm25 | es | 0.6772 | [0.6677, 0.6869] | 0.7569 | 2,417 |
+| bm25 | all | 0.6949 | [0.6909, 0.699] | 0.7568 | 11,373 |
+
+bm25 by slice (all locales): negation 0.5624 [0.5476, 0.5772] (1,143 queries) is the weakest;
+number_or_unit 0.6582, len_6_plus 0.6717, brand_in_query 0.7235. Full table in
+`reports/metrics.json` → `slices`.
+
+Rebuild on a fresh VM: `uv run psr index` (10 BM25 indexes, about 7 min) then
+`uv run psr eval --systems bm25` (a few minutes; logs in `logs/bm25.log`).
 
 Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-03):
 
@@ -97,8 +110,10 @@ One line each: date, decision, reason.
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
-- `.github/workflows/ci.yml`: never run on GitHub. Check: push and read the Actions run; the
-  `uv sync --frozen` step also needs the CPU torch index to resolve once torch is added back.
+- `.github/workflows/ci.yml`: never run on GitHub (now also has the
+  `psr --fixtures eval --systems bm25` smoke step, which passes locally). Check: push and read the
+  Actions run; the `uv sync --frozen` step also needs the CPU torch index to resolve once torch is
+  added back.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.
