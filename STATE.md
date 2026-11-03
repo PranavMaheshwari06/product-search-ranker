@@ -55,6 +55,22 @@ Both match SPEC 4.2 exactly. Per-split counts are in `docs/data_card.md`.
 ## Decision log
 One line each: date, decision, reason.
 
+- 2026-11-03: Gains kept as E 1.0, S 0.1, C 0.01, I 0.0. Source: the ESCI paper (arXiv:2206.06588,
+  Task 1): "we set gain values of 1.0, 0.1, 0.01, and 0.0" for E, S, C, I. Note: the esci-data
+  repo script `ranking/prepare_trec_eval_files.py` maps S->2, C->3 and runs trec_eval with
+  `ndcg.1=0,2=0.01,3=0.1,4=1`, i.e. S 0.01 and C 0.1, the reverse of the paper. We follow the paper.
+- 2026-11-03: MRR is averaged over the same queries as NDCG (IDCG = 0 queries excluded from both),
+  so `n_queries` describes both numbers.
+- 2026-11-03: `psr eval` saves per-query results to `reports/runs/<split>/<system>.parquet`
+  (small, committed) and recomputes `comparisons` and `slices` from every saved run, so P2/P3 can
+  compare with bm25 without re-running it. Pairs are listed in `config.COMPARISONS`.
+- 2026-11-03: `--fixtures` eval writes to `data/fixtures_reports/`, never to `reports/`; a split
+  other than test writes `metrics_<split>.json`.
+- 2026-11-03: `psr index` builds all five BM25 field indexes (all, title, bullets, brand, desc) now,
+  since P3 features need them; `psr eval` builds `all` on demand if missing.
+- 2026-11-03: `text.normalize` skips accent stripping for pure-ASCII strings (same output, much
+  faster on ~650k product texts).
+
 - 2026-11-03: `.gitignore` entries for `data/`, `indexes/`, `models/`, `mlruns/`, `logs/` are
   anchored with a leading `/`. The unanchored `data/` also matched the `data` source package, so
   `git add -A` silently skipped it. After a commit that adds a package, run `git ls-files src`.

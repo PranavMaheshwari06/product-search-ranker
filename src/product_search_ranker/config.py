@@ -48,3 +48,19 @@ def fixture_file() -> Path:
 
 def reports_dir() -> Path:
     return root() / "reports"
+
+
+def eval_reports_dir(fixtures: bool = False) -> Path:
+    """Fixture runs (tests, CI) never touch the committed reports/."""
+    return root() / "data" / "fixtures_reports" if fixtures else reports_dir()
+
+
+def indexes_dir(fixtures: bool = False) -> Path:
+    return root() / "indexes" / ("fixtures" if fixtures else "")
+
+
+K = 10
+BOOTSTRAP_N = 10_000
+PERMUTATION_N = 10_000
+# Paired differences written to metrics.json whenever both systems have a run.
+COMPARISONS = (("dense", "bm25"), ("hybrid", "bm25"), ("ltr", "bm25"), ("ltr", "hybrid"))

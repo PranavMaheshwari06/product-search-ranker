@@ -23,6 +23,22 @@ def _make_fixture(args):
     make_fixture()
 
 
+def _index(args):
+    from product_search_ranker.retrieval import bm25
+
+    fixtures = config.fixtures_mode(args.fixtures)
+    for locale in config.LOCALES:
+        for field in args.fields.split(","):
+            bm25.build(locale, field, fixtures)
+
+
+def _eval(args):
+    from product_search_ranker.evaluate.run import evaluate
+
+    systems = [s for s in args.systems.split(",") if s]
+    evaluate(systems, args.split, fixtures=config.fixtures_mode(args.fixtures))
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="psr")
     p.add_argument(
@@ -39,6 +55,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("make-fixture", help="sample the test fixture from data/processed")
     s.set_defaults(func=_make_fixture)
+
+    s = sub.add_parser("index", help="build the BM25 indexes (skips finished ones)")
+    s.add_argument("--fields", default="all,title,bullets,brand,desc")
+    s.set_defaults(func=_index)
+
+    s = sub.add_parser("eval", help="score a split and merge the results into metrics.json")
+    s.add_argument("--systems", required=True, help="comma-separated, e.g. bm25")
+    s.add_argument("--split", default="test", choices=config.SPLITS)
+    s.set_defaults(func=_eval)
     return p
 
 

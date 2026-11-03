@@ -34,6 +34,8 @@ def strip_html(s: str | None) -> str:
 
 def normalize(s: str) -> str:
     s = unicodedata.normalize("NFKC", s).lower()
+    if s.isascii():
+        return s
     # Strip accents so "cordón" and "cordon" match; the ñ -> n loss is accepted.
     s = unicodedata.normalize("NFD", s)
     return "".join(c for c in s if not unicodedata.combining(c))
