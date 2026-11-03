@@ -43,7 +43,7 @@ Between chunks: new session, `/check`, then `/build`.
 Filled from `reports/metrics.json` after each run (system, locale, NDCG@10, 95% CI).
 No system has been evaluated yet.
 
-Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-02):
+Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-03):
 
 | Locale | Queries | Judgements |
 |---|---|---|
