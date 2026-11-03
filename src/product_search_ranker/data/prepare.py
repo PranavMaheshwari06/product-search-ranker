@@ -107,17 +107,20 @@ def _stats(con: duckdb.DuckDBPyConnection) -> dict:
     counts = {
         f"{split}/{loc}": {"queries": nq, "judgements": n}
         for split, loc, nq, n in q(
-            "SELECT split, locale, count(DISTINCT query_id), count(*) FROM rows GROUP BY ALL"
+            "SELECT split, locale, count(DISTINCT query_id), count(*) FROM rows "
+            "GROUP BY ALL ORDER BY ALL"
         )
     }
     totals = {
         loc: {"queries": nq, "judgements": n}
         for loc, nq, n in q(
-            "SELECT locale, count(DISTINCT query_id), count(*) FROM rows GROUP BY 1"
+            "SELECT locale, count(DISTINCT query_id), count(*) FROM rows GROUP BY 1 ORDER BY 1"
         )
     }
     labels = {}
-    for split, loc, lab, n in q("SELECT split, locale, label, count(*) FROM rows GROUP BY ALL"):
+    for split, loc, lab, n in q(
+        "SELECT split, locale, label, count(*) FROM rows GROUP BY ALL ORDER BY ALL"
+    ):
         labels.setdefault(f"{split}/{loc}", {})[lab] = n
     # A query text that appears under two splits would leak even with distinct query_ids.
     text_overlap = q(
@@ -145,7 +148,9 @@ def _stats(con: duckdb.DuckDBPyConnection) -> dict:
             )[0][0],
             "query_texts_in_two_splits": text_overlap,
         },
-        "n_products": {loc: n for loc, n in q("SELECT locale, count(*) FROM products GROUP BY 1")},
+        "n_products": {
+            loc: n for loc, n in q("SELECT locale, count(*) FROM products GROUP BY 1 ORDER BY 1")
+        },
     }
 
 

@@ -12,7 +12,10 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest -q
-      # The training and eval smoke steps are added by the phases that create those commands (P1, P3).
+      - run: uv run psr --fixtures prepare
+      - run: uv run psr --fixtures index
+      - run: uv run psr --fixtures eval --systems bm25 --split test
+      # `psr --fixtures train` and the ltr eval smoke step are added in P3.
 
   terraform:
     runs-on: ubuntu-latest

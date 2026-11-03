@@ -9,6 +9,19 @@ LABELS = ("E", "S", "C", "I")
 GAINS = {"E": 1.0, "S": 0.1, "C": 0.01, "I": 0.0}
 SPLITS = ("train", "val", "test")
 
+K = 10
+N_BOOTSTRAP = 10_000
+N_PERMUTATIONS = 10_000
+# Paired differences reported in metrics.json, (a, b) means a minus b; a pair is skipped until
+# both systems have been evaluated on the split.
+COMPARISONS = (
+    ("dense", "bm25"),
+    ("hybrid", "bm25"),
+    ("ltr", "bm25"),
+    ("ltr", "hybrid"),
+    ("ltr_qu", "ltr"),
+)
+
 ESCI_FILES = {
     "shopping_queries_dataset_examples.parquet": "media",
     "shopping_queries_dataset_products.parquet": "media",
@@ -48,3 +61,19 @@ def fixture_file() -> Path:
 
 def reports_dir() -> Path:
     return root() / "reports"
+
+
+def indexes_dir(fixtures: bool = False) -> Path:
+    base = root() / "indexes"
+    return base / "fixtures" if fixtures else base
+
+
+def runs_dir(fixtures: bool = False) -> Path:
+    """Per-query results of each eval, kept so later evals can make paired comparisons."""
+    return root() / "data" / ("fixtures_runs" if fixtures else "runs")
+
+
+def metrics_path(split: str = "test", fixtures: bool = False) -> Path:
+    # Fixture runs never touch reports/: those numbers would mean nothing.
+    base = root() / "data" / "fixtures_reports" if fixtures else reports_dir()
+    return base / ("metrics.json" if split == "test" else f"metrics_{split}.json")

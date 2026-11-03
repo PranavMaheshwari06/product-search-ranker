@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **C** (cloud sessions: code, tests, real-data runs, Docker, `terraform validate`)
-Next: **chunk 2 (P1)**
+Next: **chunk 3 (P2, P3)**
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -23,7 +23,7 @@ Between chunks: new session, `/check`, then `/build`.
 ## Stage C
 - [x] P0 Scaffold + data (repaired 2026-11-03: the `data/` ignore line had kept the
   `src/product_search_ranker/data/` package out of git; now `/data/`, package committed)
-- [ ] P1 Metrics, statistics, BM25, eval runner
+- [x] P1 Metrics, statistics, BM25, eval runner
 - [ ] P2 Dense retrieval + hybrid (RRF)
 - [ ] P3 Learning-to-rank + MLflow
 - [ ] P4 LLM client + query understanding
@@ -41,11 +41,23 @@ Between chunks: new session, `/check`, then `/build`.
 
 ## Results so far
 Filled from `reports/metrics.json` after each run (system, locale, NDCG@10, 95% CI).
-No system has been evaluated yet.
+Official test split, `psr eval --systems bm25 --split test`, 2026-11-03. No query was excluded
+(every test query has a candidate with gain > 0).
+
+| System | Locale | NDCG@10 | 95% CI | MRR | Queries |
+|---|---|---|---|---|---|
+| bm25 | us | 0.6997 | [0.6952, 0.7040] | 0.7567 | 8,956 |
+| bm25 | es | 0.6772 | [0.6677, 0.6869] | 0.7569 | 2,417 |
+| bm25 | all | 0.6949 | [0.6909, 0.6990] | 0.7568 | 11,373 |
+
+Slices (bm25, all locales, NDCG@10): `negation` 0.5624 (1,143 queries) is the weakest;
+`brand_in_query` 0.7235 (2,194) the strongest. Full table in `reports/metrics.json`.
 
 Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-03). A fresh VM has no
 `data/`: `uv run psr fetch && uv run psr prepare` rebuilds it in about 2 minutes (1.1 GB raw,
-572 MB processed); the counts and data sha come out the same.
+572 MB processed); the counts and data sha come out the same. Then `uv run psr index` builds
+the 10 BM25 indexes (2 locales x 5 fields) in about 10 minutes (988 MB in `indexes/`), and
+`uv run psr eval --systems bm25 --split test` takes about 2 minutes.
 
 | Locale | Queries | Judgements |
 |---|---|---|
@@ -56,6 +68,25 @@ Both match SPEC 4.2 exactly. Per-split counts are in `docs/data_card.md`.
 
 ## Decision log
 One line each: date, decision, reason.
+
+- 2026-11-03: Gains E=1.0, S=0.1, C=0.01, I=0.0 confirmed against esci-data: `ranking/train.py`
+  (`esci_label2gain`) and `ranking/launch-predictions-task1.sh` (trec_eval
+  `-m 'ndcg.1=0,2=0.01,3=0.1,4=1'`). Their baseline uses NDCG over the full list; ours is
+  NDCG@10 (SPEC 3), so the numbers are not directly comparable.
+- 2026-11-03: MRR is averaged over the same queries as NDCG (IDCG > 0); a query whose list has
+  no Exact item counts as 0. RR looks at the whole candidate list, not only the top 10.
+- 2026-11-03: `psr eval` writes per-query results to `data/runs/<split>/<system>.parquet`
+  (git-ignored) so later evals can make paired comparisons with earlier systems. Comparisons are
+  the pairs in `config.COMPARISONS`, per locale (us, es, all), each with `n_queries`.
+  `metrics.json` holds the test split; other splits go to `metrics_<split>.json`. `--fixtures`
+  writes to `data/fixtures_reports/`, never to `reports/`. `--candidate` is left to P6.
+- 2026-11-03: BM25 uses the bm25s defaults (method `lucene`, k1 = 1.5, b = 0.75). `psr index`
+  builds all five fields (`all`, `title`, `bullets`, `brand`, `desc`) now, so P3 has its
+  features; the eval uses `all` only. Indexes are written to a `.tmp` dir and renamed, so an
+  interrupted build is redone and a finished one is skipped.
+- 2026-11-03: `prepare` stats queries now `ORDER BY`, so `reports/data_stats.json` keys come out
+  in the same order on every run (values were already stable). The committed file is in the old
+  order until the next `psr prepare`.
 
 - 2026-11-03: `.gitignore` entries for `data/`, `indexes/`, `models/`, `mlruns/`, `logs/` are
   anchored with a leading `/`. The unanchored `data/` also matched the `data` source package, so
@@ -83,8 +114,9 @@ One line each: date, decision, reason.
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
-- `.github/workflows/ci.yml`: never run on GitHub. Check: push and read the Actions run; the
-  `uv sync --frozen` step also needs the CPU torch index to resolve once torch is added back.
+- `.github/workflows/ci.yml`: never run on GitHub (P1 added the fixture `prepare`, `index` and
+  `eval --systems bm25` smoke steps; they pass locally). Check: read the Actions run for the
+  push; the `uv sync --frozen` step also needs the CPU torch index once torch is added back.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.
