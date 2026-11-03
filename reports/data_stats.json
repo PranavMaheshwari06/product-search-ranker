@@ -1,0 +1,91 @@
+{
+  "counts": {
+    "test/us": {
+      "queries": 8956,
+      "judgements": 181701
+    },
+    "test/es": {
+      "queries": 2417,
+      "judgements": 65883
+    },
+    "val/us": {
+      "queries": 2081,
+      "judgements": 40962
+    },
+    "val/es": {
+      "queries": 593,
+      "judgements": 16012
+    },
+    "train/us": {
+      "queries": 18807,
+      "judgements": 378691
+    },
+    "train/es": {
+      "queries": 5039,
+      "judgements": 136879
+    }
+  },
+  "totals": {
+    "us": {
+      "queries": 29844,
+      "judgements": 601354
+    },
+    "es": {
+      "queries": 8049,
+      "judgements": 218774
+    }
+  },
+  "labels": {
+    "train/es": {
+      "S": 45686,
+      "C": 11210,
+      "E": 56363,
+      "I": 23620
+    },
+    "test/es": {
+      "S": 22458,
+      "C": 4902,
+      "E": 27074,
+      "I": 11449
+    },
+    "val/es": {
+      "S": 5114,
+      "C": 1278,
+      "E": 6768,
+      "I": 2852
+    },
+    "train/us": {
+      "E": 164590,
+      "I": 63872,
+      "C": 17114,
+      "S": 133115
+    },
+    "test/us": {
+      "S": 63563,
+      "C": 8099,
+      "I": 30331,
+      "E": 79708
+    },
+    "val/us": {
+      "I": 7244,
+      "E": 17229,
+      "C": 1976,
+      "S": 14513
+    }
+  },
+  "issues": {
+    "empty_titles": 0,
+    "empty_brands": 35643,
+    "empty_descriptions": 306846,
+    "duplicate_query_product_pairs": 0,
+    "bullets_over_2000_chars": 10555,
+    "query_texts_in_two_splits": 0
+  },
+  "n_products": {
+    "us": 482105,
+    "es": 167761
+  },
+  "date": "2026-11-02",
+  "duckdb": "2.0.0",
+  "data_sha": "b09cb98146bfc0f25509bb3e2c7f518430e73b1cf6f7168eca61b3451aa4e177"
+}

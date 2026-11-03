@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **C** (cloud sessions: code, tests, real-data runs, Docker, `terraform validate`)
-Next: **chunk 1 (P0)**
+Next: **chunk 2 (P1)**
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -21,7 +21,7 @@ in mind at once. Pick the newest model of that tier.
 Between chunks: new session, `/check`, then `/build`.
 
 ## Stage C
-- [ ] P0 Scaffold + data
+- [x] P0 Scaffold + data
 - [ ] P1 Metrics, statistics, BM25, eval runner
 - [ ] P2 Dense retrieval + hybrid (RRF)
 - [ ] P3 Learning-to-rank + MLflow
@@ -40,13 +40,45 @@ Between chunks: new session, `/check`, then `/build`.
 
 ## Results so far
 Filled from `reports/metrics.json` after each run (system, locale, NDCG@10, 95% CI).
+No system has been evaluated yet.
+
+Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-02):
+
+| Locale | Queries | Judgements |
+|---|---|---|
+| us | 29,844 | 601,354 |
+| es | 8,049 | 218,774 |
+
+Both match SPEC 4.2 exactly. Per-split counts are in `docs/data_card.md`.
 
 ## Decision log
 One line each: date, decision, reason.
 
+- 2026-11-02: `torch` and `sentence-transformers` are not in `pyproject.toml` yet. Every wheel on
+  the PyTorch CPU index is served from `download-r2.pytorch.org`, which this cloud session's
+  network policy blocks (only `download.pytorch.org` is allowed), so `uv` cannot resolve them. They
+  are first needed in P2 (chunk 3). The `[[tool.uv.index]]` entry for the CPU index is kept.
+  Resolve in chunk 3: allow `download-r2.pytorch.org`, or decide to use the PyPI torch wheel.
+- 2026-11-02: `shopping_queries_dataset_sources.csv` is fetched from `raw.githubusercontent.com`:
+  the LFS media host answers 404 for it (it is a plain file, not LFS). The two parquet files come
+  from the media host as SPEC 4.1 says; `data/MANIFEST.json` records the source of each.
+- 2026-11-02: Validation split uses `((query_id * 2654435761) % 4294967296) // 65536 % 10 = 0`
+  instead of DuckDB `hash()`, so the split does not change if DuckDB changes its hash function.
+- 2026-11-02: `psr prepare` also writes `reports/data_stats.json` and renders
+  `docs/data_card.md` from it, so the card's numbers come from a report. `--fixtures` writes to
+  `data/fixtures_processed/`, never to `data/processed/`.
+- 2026-11-02: The `fixture` is sampled from train, val and test (not only train and test) in
+  proportion per locale, so the fixture has validation queries for the LTR smoke run.
+- 2026-11-02: CI `ci.yml` has the lint and test steps only; the `psr --fixtures train` and
+  `eval` smoke steps are added when P1 and P3 create those commands. The terraform job skips
+  itself until `deploy/terraform/aws/*.tf` exists.
+
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
+
+- `.github/workflows/ci.yml`: never run on GitHub. Check: push and read the Actions run; the
+  `uv sync --frozen` step also needs the CPU torch index to resolve once torch is added back.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.

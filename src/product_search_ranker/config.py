@@ -1,0 +1,50 @@
+"""Paths, constants and environment overrides. Everything else imports from here."""
+
+import os
+from pathlib import Path
+
+SEED = 0
+LOCALES = ("us", "es")
+LABELS = ("E", "S", "C", "I")
+GAINS = {"E": 1.0, "S": 0.1, "C": 0.01, "I": 0.0}
+SPLITS = ("train", "val", "test")
+
+ESCI_FILES = {
+    "shopping_queries_dataset_examples.parquet": "media",
+    "shopping_queries_dataset_products.parquet": "media",
+    # Plain text in git, not LFS: the media host answers 404 for it.
+    "shopping_queries_dataset_sources.csv": "raw",
+}
+ESCI_BASES = {
+    "media": "https://media.githubusercontent.com/media/amazon-science/esci-data/main/shopping_queries_dataset",
+    "raw": "https://raw.githubusercontent.com/amazon-science/esci-data/main/shopping_queries_dataset",
+}
+
+# Expected small_version counts (esci-data README): locale -> (queries, judgements).
+EXPECTED_COUNTS = {"us": (29_844, 601_354), "es": (8_049, 218_774)}
+COUNT_TOLERANCE = 0.005
+
+
+def root() -> Path:
+    return Path(os.environ.get("PSR_HOME", ".")).resolve()
+
+
+def fixtures_mode(flag: bool = False) -> bool:
+    return flag or os.environ.get("PSR_DATA_MODE") == "fixtures"
+
+
+def raw_dir() -> Path:
+    return root() / "data" / "raw"
+
+
+def processed_dir(fixtures: bool = False) -> Path:
+    sub = "fixtures_processed" if fixtures else "processed"
+    return root() / "data" / sub
+
+
+def fixture_file() -> Path:
+    return root() / "tests" / "fixtures" / "esci_sample.parquet"
+
+
+def reports_dir() -> Path:
+    return root() / "reports"
