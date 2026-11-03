@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **C** (cloud sessions: code, tests, real-data runs, Docker, `terraform validate`)
-Next: **chunk 2 (P1)**
+Next: **chunk 1 (P0) repair**, then chunk 2 (P1)
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -21,7 +21,11 @@ in mind at once. Pick the newest model of that tier.
 Between chunks: new session, `/check`, then `/build`.
 
 ## Stage C
-- [x] P0 Scaffold + data
+- [ ] P0 Scaffold + data. Reopened 2026-11-03 by `/check`: `src/product_search_ranker/data/`
+  (`fetch.py`, `prepare.py`, `fixture.py`) was never committed, because the `.gitignore` line
+  `data/` also matches it. `tests/test_data.py` fails to import and `psr fetch`/`prepare` cannot
+  run. Fix: anchor the ignore as `/data/`, rewrite the three modules from SPEC 4.1-4.3 and the
+  Decision log, re-run the P0 gate (fixture, `reports/data_stats.json` and the data card exist).
 - [ ] P1 Metrics, statistics, BM25, eval runner
 - [ ] P2 Dense retrieval + hybrid (RRF)
 - [ ] P3 Learning-to-rank + MLflow
