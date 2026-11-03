@@ -4,11 +4,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .env
-data/
-indexes/
-models/
-mlruns/
-logs/
+/data/
+/indexes/
+/models/
+/mlruns/
+/logs/
 *.tfstate
 *.tfstate.*
 .terraform/

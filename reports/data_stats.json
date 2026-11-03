@@ -1,12 +1,12 @@
 {
   "counts": {
-    "test/us": {
-      "queries": 8956,
-      "judgements": 181701
+    "train/us": {
+      "queries": 18807,
+      "judgements": 378691
     },
-    "test/es": {
-      "queries": 2417,
-      "judgements": 65883
+    "train/es": {
+      "queries": 5039,
+      "judgements": 136879
     },
     "val/us": {
       "queries": 2081,
@@ -16,13 +16,13 @@
       "queries": 593,
       "judgements": 16012
     },
-    "train/us": {
-      "queries": 18807,
-      "judgements": 378691
+    "test/us": {
+      "queries": 8956,
+      "judgements": 181701
     },
-    "train/es": {
-      "queries": 5039,
-      "judgements": 136879
+    "test/es": {
+      "queries": 2417,
+      "judgements": 65883
     }
   },
   "totals": {
@@ -36,6 +36,24 @@
     }
   },
   "labels": {
+    "train/us": {
+      "E": 164590,
+      "I": 63872,
+      "C": 17114,
+      "S": 133115
+    },
+    "val/us": {
+      "E": 17229,
+      "I": 7244,
+      "C": 1976,
+      "S": 14513
+    },
+    "test/us": {
+      "S": 63563,
+      "C": 8099,
+      "I": 30331,
+      "E": 79708
+    },
     "train/es": {
       "S": 45686,
       "C": 11210,
@@ -53,24 +71,6 @@
       "C": 1278,
       "E": 6768,
       "I": 2852
-    },
-    "train/us": {
-      "E": 164590,
-      "I": 63872,
-      "C": 17114,
-      "S": 133115
-    },
-    "test/us": {
-      "S": 63563,
-      "C": 8099,
-      "I": 30331,
-      "E": 79708
-    },
-    "val/us": {
-      "I": 7244,
-      "E": 17229,
-      "C": 1976,
-      "S": 14513
     }
   },
   "issues": {
@@ -85,7 +85,7 @@
     "us": 482105,
     "es": 167761
   },
-  "date": "2026-11-02",
+  "date": "2026-11-03",
   "duckdb": "2.0.0",
   "data_sha": "b09cb98146bfc0f25509bb3e2c7f518430e73b1cf6f7168eca61b3451aa4e177"
 }

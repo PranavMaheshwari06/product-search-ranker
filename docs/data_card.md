@@ -1,6 +1,6 @@
 # Data card: ESCI (Shopping Queries Dataset)
 
-All numbers below come from `reports/data_stats.json` (written by `psr prepare`, 2026-11-02, data
+All numbers below come from `reports/data_stats.json` (written by `psr prepare`, 2026-11-03, data
 sha `b09cb98146bfc0f25509bb3e2c7f518430e73b1cf6f7168eca61b3451aa4e177`).
 
 ## Source and licence
