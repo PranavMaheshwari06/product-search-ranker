@@ -43,7 +43,9 @@ Between chunks: new session, `/check`, then `/build`.
 Filled from `reports/metrics.json` after each run (system, locale, NDCG@10, 95% CI).
 No system has been evaluated yet.
 
-Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-02):
+Data (from `reports/data_stats.json`, `psr prepare` on real data, 2026-11-03). A fresh VM has no
+`data/`: `uv run psr fetch && uv run psr prepare` rebuilds it in about 2 minutes (1.1 GB raw,
+572 MB processed); the counts and data sha come out the same.
 
 | Locale | Queries | Judgements |
 |---|---|---|
