@@ -91,8 +91,11 @@ def parse_labels(obj, product_ids: list[str]) -> tuple[dict[str, str], list[str]
     return ok, [p for p in product_ids if p not in ok]
 
 
-def judge_query(rows: pd.DataFrame, provider=None, model=None, record=False) -> dict:
-    """Judge one query's candidates in one call; one retry if any candidate is missing."""
+def judge_query(rows: pd.DataFrame, provider=None, model=None, record=False) -> dict | None:
+    """Judge one query's candidates in one call; one retry if any candidate is missing.
+
+    None when no call got a reply (network, quota): nothing is cached and the next run retries.
+    """
     first = rows.iloc[0]
     prompt = build_prompt(first.query, first.locale, rows)
     ids = sorted(rows.product_id)
@@ -110,6 +113,8 @@ def judge_query(rows: pd.DataFrame, provider=None, model=None, record=False) -> 
         # A retry with the same prompt would read the same replay file; only real calls retry.
         if (provider or config.llm_provider()) == "replay":
             break
+    if not metas:
+        return None
     return {
         "key": f"batch:{first.query_id}",
         "query_id": int(first.query_id),
@@ -129,6 +134,8 @@ def judge_single(
         if f"single:{row.query_id}:{row.product_id}" in done:
             continue
         rec = judge_query(rows.loc[[row.name]], provider, model, record)
+        if rec is None:
+            continue
         rec.update(key=f"single:{row.query_id}:{row.product_id}", mode="single")
         out.append(rec)
     return out
@@ -173,7 +180,8 @@ def run(fixtures: bool = False, provider=None, model=None, record=False) -> pd.D
             rows = picked[picked.query_id == qid]
             todo = []
             if f"batch:{qid}" not in done:
-                todo.append(judge_query(rows, provider, model, record))
+                rec = judge_query(rows, provider, model, record)
+                todo += [rec] if rec else []
             if qid in single_ids:
                 todo += judge_single(rows, provider, model, record, done)
             for rec in todo:

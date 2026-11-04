@@ -59,6 +59,14 @@ def _agreement(args):
     run(systems, fixtures=config.fixtures_mode(args.fixtures))
 
 
+def _qu(args):
+    from product_search_ranker.llm.query_understanding import run
+
+    fixtures = config.fixtures_mode(args.fixtures)
+    provider = args.provider or config.llm_provider(fixtures)
+    run(fixtures, provider=provider, record=args.record, limit=args.limit)
+
+
 def _add_llm_args(s) -> None:
     s.add_argument(
         "--provider",
@@ -97,6 +105,11 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("llm-ping", help="one tiny LLM call; picks the Gemini Flash model if unset")
     s.add_argument("--provider", choices=("replay", "gemini", "ollama"))
     s.set_defaults(func=_llm_ping)
+
+    s = sub.add_parser("qu", help="LLM query understanding for hard queries (resumable)")
+    _add_llm_args(s)
+    s.add_argument("--limit", type=int, help="only the first N uncached queries (a test drive)")
+    s.set_defaults(func=_qu)
 
     s = sub.add_parser("judge", help="LLM-label the judged sample (resumable)")
     _add_llm_args(s)

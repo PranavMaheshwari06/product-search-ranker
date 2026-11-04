@@ -42,6 +42,13 @@ def test_parse_labels_counts_duplicates_unknown_and_bad_labels_as_missing():
     assert judge.parse_labels({"not": "a list"}, ["a"]) == ({}, ["a"])
 
 
+def test_a_query_without_any_reply_is_not_cached(home):
+    prepare(fixtures=True)
+    test = pd.read_parquet(config.processed_dir(True) / "test.parquet", columns=judge.COLUMNS)
+    rows = test[test.query_id == test.query_id.iloc[0]]
+    assert judge.judge_query(rows, provider="replay") is None
+
+
 @pytest.fixture
 def judged_home(home):
     """Fixture data plus replay files: the 'judge' copies human labels, flips every 4th pair and

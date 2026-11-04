@@ -141,10 +141,13 @@ P4 and P5 stay unticked: their gates need real LLM runs.
 
 Built (offline, tested with the `replay` provider; no real LLM call was made):
 `llm/client.py` (`complete_json`, providers replay/gemini/ollama, rate limit, retries, `--record`,
-prices), `judge/sample.py`, `judge/judge.py`, `judge/agreement.py`, commands `llm-ping`,
-`judge`, `agreement`, tests `tests/test_llm.py` and `tests/test_judge.py` (kappa vs scikit-learn).
-Not built yet: `llm/query_understanding.py` and the `ltr_qu` features (they plug into P3's
-`features.py`), `psr qu`, `reports/qu.json`.
+prices), `llm/query_understanding.py` (hard-query extraction and the `qu_*` feature function),
+`judge/sample.py`, `judge/judge.py`, `judge/agreement.py`, commands `llm-ping`, `qu`, `judge`,
+`agreement`, tests `tests/test_llm.py`, `tests/test_qu.py`, `tests/test_judge.py` (kappa vs
+scikit-learn).
+Not built yet (needs P3): the `ltr_qu` system, i.e. `rank/features.py` adding
+`query_understanding.qu_features` for the hard queries, its training run, and `reports/qu.json`
+(`ltr` vs `ltr_qu` on the hard-query slice, calls, tokens, cost if prices are set).
 
 Decision log (to move):
 - 2026-11-04: P4/P5 offline code built on branch `p4-p5-llm-code` in the cloud, in parallel with
@@ -172,12 +175,27 @@ Decision log (to move):
   a label (`n_dropped_incomplete` reported); it scores systems with `evaluate.run.score_system`,
   so it covers whatever systems exist when `psr agreement` runs.
 
+- 2026-11-04: Query understanding: hard = negation, number_or_unit or brand_in_query (brands
+  from the query's candidates). Batches of 20 queries from one locale, in query_id order.
+  Coverage on the real data: 8,954 queries (val 1,157, test 4,797, train sample 3,000), 448
+  batches. Items missing, duplicated or invalid get one retry call together; after that they
+  are cached empty and counted. `qu_features` lives in `query_understanding.py` so
+  `rank/features.py` (P3) only imports it: `qu_present`, `must_not_in_title`, `qu_brand_match`,
+  `qu_size_match` (size with spaces removed, not inside a longer number), `qu_color_match`,
+  `qu_type_in_title` (share of type words in the title); all 0 when a query has no output.
+- 2026-11-04: Judge and qu cache only items whose call got a reply. A call that fails outright
+  (network, quota, after the 5/15/45 s retries) writes nothing, so the next run asks again
+  instead of storing an empty result.
+
 UNVERIFIED (to move):
 - `llm/client.py` gemini and ollama providers: never called a real API. Check:
   `uv run psr llm-ping` with `GEMINI_API_KEY` in `.env`.
 - `psr judge` and `psr agreement` on real data: never run. Check: `uv run psr judge` (about 150
   batched calls plus about 660 single-pair calls; at 10 requests/min about 1.5 h, resumable),
   then `uv run psr agreement` after dense, hybrid and ltr exist. P5 then has its **STOP**.
+- `psr qu` on real data: never run. Check: `uv run psr qu --limit 40` first (2 calls), read
+  `data/llm_cache/qu.jsonl`, then `uv run psr qu` (448+ calls, about 45 min at 10 requests/min,
+  resumable).
 - CI has no judge smoke step: it needs recorded replay fixtures. Check: `uv run psr --fixtures
   judge --provider gemini --record`, commit `tests/fixtures/replay/`, then add `psr --fixtures
   judge` and `psr --fixtures agreement` to `ci.yml`.
