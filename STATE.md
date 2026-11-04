@@ -61,6 +61,9 @@ build time in the log); `psr eval --systems bm25 --split test` gave the same NDC
 Pre-flight for P2 (throwaway script, not a report): multilingual-e5-small on CPU, 2,000 random
 products, 31.1 passages/s with 8 torch threads, which projects to 5.80 h for 649,866 products.
 `/build` decides whether to embed a subset (SPEC 5.2).
+GPU re-time (RTX 4050 Laptop, 6.00 GiB, fp16, 2,000 passages, max_seq_length 256), passages/s and
+peak `max_memory_allocated`: bs 64 955.5, 0.37 GiB; bs 128 1132.0, 0.51 GiB; bs 256 1110.2,
+0.80 GiB; bs 512 976.3, 1.29 GiB (no OOM). Projected for 649,866 products at bs 512: 0.18 h.
 
 Rebuild on a fresh VM: `uv run psr index` (10 BM25 indexes, about 7 min) then
 `uv run psr eval --systems bm25` (a few minutes; logs in `logs/bm25.log`).
@@ -103,6 +106,14 @@ One line each: date, decision, reason.
 - 2026-11-04: torch + sentence-transformers added (CPU index); chunk 3 onward runs locally because
   the cloud session ended. Locked: torch 2.15.0+cpu, sentence-transformers 6.2.0, Linux only (no
   macOS marker needed). SPEC section 7 already lists both.
+- 2026-11-04: torch from PyPI (CUDA build, 2.15.0+cu132) instead of the CPU index, so embeddings
+  run on the local GPU; CI still runs on CPU. The wheel's CUDA 13.2 is newer than the 13.1 the
+  driver (591.66) reports; fp16 kernels ran fine (same major version), so no `cuXXX` index.
+- 2026-11-04: Dense embeddings (P2) are computed on the GPU in fp16 with batch size 512 (peak
+  1.29 GB of 6.00 GB). This deviates from SPEC 5.2 ("on CPU"). The 2.5 h subset rule is applied to
+  the measured GPU throughput: 0.18 h for all 649,866 products, so no subset. Serving (P7) still
+  encodes queries on CPU.
+- 2026-11-04: LightGBM stays on CPU (the PyPI wheel has no GPU build; data is small).
 - 2026-11-04: `.claude/settings.json` (was `.claude/commands/settings.json`, where Claude Code does
   not read it as settings). Allow and deny rules unchanged; the deny list still blocks
   `terraform apply`/`destroy`, force pushes and reading `.env`.
@@ -126,9 +137,10 @@ when it is confirmed or fixed.
 
 - `.github/workflows/ci.yml`: never run on GitHub (now also has the
   `psr --fixtures eval --systems bm25` smoke step, which passes locally). Check: push and read the
-  Actions run. The CPU torch index is now in `uv.lock` and `uv sync --frozen` works locally; that
-  the GitHub runner can reach `download.pytorch.org` and `download-r2.pytorch.org` is not checked,
-  and the torch install adds a large download to every CI run.
+  Actions run. `uv.lock` now has torch from PyPI (the CUDA wheel plus the nvidia-* runtime
+  packages, a much larger download than the CPU wheel) and `uv sync --frozen` works locally; that
+  the GitHub runner installs it, has the disk for it and still runs the tests on CPU is not
+  checked, and the install adds that large download to every CI run.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.

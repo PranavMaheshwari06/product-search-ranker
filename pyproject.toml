@@ -36,14 +36,6 @@ psr = "product_search_ranker.cli:main"
 requires = ["uv_build>=0.11,<0.12"]
 build-backend = "uv_build"
 
-[tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
 [tool.ruff]
 line-length = 100
 target-version = "py312"
