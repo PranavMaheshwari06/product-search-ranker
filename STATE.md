@@ -2,7 +2,7 @@
 
 Read this first in every session. Update it before every commit.
 
-Current stage: **C** (cloud sessions: code, tests, real-data runs, Docker, `terraform validate`)
+Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
 Next: **chunk 3 (P2, P3)**
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
@@ -33,7 +33,8 @@ Between chunks: new session, `/check`, then `/build`.
 - [ ] P8 README, design notes, decision memo, UNVERIFIED complete
 
 ## Stage L (VS Code, personal laptop)
-- [ ] L0 Clone, `uv sync`, gates green, work through UNVERIFIED
+- [x] L0 Clone, `uv sync`, gates green, work through UNVERIFIED (2026-11-04: torch and
+  sentence-transformers added, BM25 indexes rebuilt, bm25 test row reproduced)
 - [ ] L1 Only if the cloud Gemini key failed: real judge + query-understanding runs (user reviews)
 - [ ] L2 `docker compose up`, one full DAG run, screenshot of the run history
 - [ ] L3 AWS: **STOP**, user sets the budget; `terraform apply`, publish, live URL, 2-min video
@@ -52,6 +53,14 @@ Test split, 2026-11-03. No query was excluded (`n_excluded` = 0 everywhere).
 bm25 by slice (all locales): negation 0.5624 [0.5476, 0.5772] (1,143 queries) is the weakest;
 number_or_unit 0.6582, len_6_plus 0.6717, brand_in_query 0.7235. Full table in
 `reports/metrics.json` → `slices`.
+
+Local rebuild, 2026-11-04 (WSL2, 16 threads, 11 GB): `psr index` built the 10 indexes (399 s of
+build time in the log); `psr eval --systems bm25 --split test` gave the same NDCG@10, CIs and
+`n_queries` as the table above, and `reports/runs/test/bm25.parquet` is byte-identical. Only the
+`updated` and `git_sha` fields of `reports/metrics.json` changed, so that file was not committed.
+Pre-flight for P2 (throwaway script, not a report): multilingual-e5-small on CPU, 2,000 random
+products, 31.1 passages/s with 8 torch threads, which projects to 5.80 h for 649,866 products.
+`/build` decides whether to embed a subset (SPEC 5.2).
 
 Rebuild on a fresh VM: `uv run psr index` (10 BM25 indexes, about 7 min) then
 `uv run psr eval --systems bm25` (a few minutes; logs in `logs/bm25.log`).
@@ -87,11 +96,16 @@ One line each: date, decision, reason.
 - 2026-11-03: `.gitignore` entries for `data/`, `indexes/`, `models/`, `mlruns/`, `logs/` are
   anchored with a leading `/`. The unanchored `data/` also matched the `data` source package, so
   `git add -A` silently skipped it. After a commit that adds a package, run `git ls-files src`.
-- 2026-11-02: `torch` and `sentence-transformers` are not in `pyproject.toml` yet. Every wheel on
-  the PyTorch CPU index is served from `download-r2.pytorch.org`, which this cloud session's
-  network policy blocks (only `download.pytorch.org` is allowed), so `uv` cannot resolve them. They
-  are first needed in P2 (chunk 3). The `[[tool.uv.index]]` entry for the CPU index is kept.
-  Resolve in chunk 3: allow `download-r2.pytorch.org`, or decide to use the PyPI torch wheel.
+- 2026-11-02 (resolved 2026-11-04): `torch` and `sentence-transformers` were not in `pyproject.toml`
+  because the cloud session's network policy blocked `download-r2.pytorch.org`, where the PyTorch
+  CPU index serves its wheels. On the local machine both hosts are reachable and `uv` resolves
+  them, so the CPU index entry stays.
+- 2026-11-04: torch + sentence-transformers added (CPU index); chunk 3 onward runs locally because
+  the cloud session ended. Locked: torch 2.15.0+cpu, sentence-transformers 6.2.0, Linux only (no
+  macOS marker needed). SPEC section 7 already lists both.
+- 2026-11-04: `.claude/settings.json` (was `.claude/commands/settings.json`, where Claude Code does
+  not read it as settings). Allow and deny rules unchanged; the deny list still blocks
+  `terraform apply`/`destroy`, force pushes and reading `.env`.
 - 2026-11-02: `shopping_queries_dataset_sources.csv` is fetched from `raw.githubusercontent.com`:
   the LFS media host answers 404 for it (it is a plain file, not LFS). The two parquet files come
   from the media host as SPEC 4.1 says; `data/MANIFEST.json` records the source of each.
@@ -112,8 +126,9 @@ when it is confirmed or fixed.
 
 - `.github/workflows/ci.yml`: never run on GitHub (now also has the
   `psr --fixtures eval --systems bm25` smoke step, which passes locally). Check: push and read the
-  Actions run; the `uv sync --frozen` step also needs the CPU torch index to resolve once torch is
-  added back.
+  Actions run. The CPU torch index is now in `uv.lock` and `uv sync --frozen` works locally; that
+  the GitHub runner can reach `download.pytorch.org` and `download-r2.pytorch.org` is not checked,
+  and the torch install adds a large download to every CI run.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.
