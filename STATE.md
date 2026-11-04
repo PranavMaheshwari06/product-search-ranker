@@ -132,3 +132,52 @@ when it is confirmed or fixed.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.
+
+## Parallel branch `p4-p5-llm-code` (cloud session, 2026-11-04)
+Built out of order, with the user's approval, while chunk 3 runs locally on `main`. Kept in this
+section so the merge does not collide with chunk 3 edits. **On merge into `main`:** move the
+Decision-log and UNVERIFIED lines below into their sections, then delete this section.
+P4 and P5 stay unticked: their gates need real LLM runs.
+
+Built (offline, tested with the `replay` provider; no real LLM call was made):
+`llm/client.py` (`complete_json`, providers replay/gemini/ollama, rate limit, retries, `--record`,
+prices), `judge/sample.py`, `judge/judge.py`, `judge/agreement.py`, commands `llm-ping`,
+`judge`, `agreement`, tests `tests/test_llm.py` and `tests/test_judge.py` (kappa vs scikit-learn).
+Not built yet: `llm/query_understanding.py` and the `ltr_qu` features (they plug into P3's
+`features.py`), `psr qu`, `reports/qu.json`.
+
+Decision log (to move):
+- 2026-11-04: P4/P5 offline code built on branch `p4-p5-llm-code` in the cloud, in parallel with
+  chunk 3 on `main`; the user approved the change of order. The cloud proxy did not add a Gemini
+  key (`GET /v1beta/models` without a key answered 403), so the real runs are Stage L1, locally,
+  with `GEMINI_API_KEY` in `.env`.
+- 2026-11-04: Judge prompt uses the four ESCI label definitions verbatim from Reddy et al. 2022
+  (arXiv:2206.06588), read via Firecrawl because arxiv.org is blocked here. The same paper says
+  "we set gain values of 1.0, 0.1, 0.01, and 0.0" for E, S, C, I, matching `config.GAINS`.
+- 2026-11-04: `PSR_GEMINI_MODEL` has no default. `psr llm-ping` lists the models when it is unset
+  and picks the stable `gemini-<version>-flash` with the highest version (lite and preview
+  models left out), then says to put it in `.env` and log the name and date here.
+- 2026-11-04: `config.load_dotenv()` reads `.env` with the stdlib (no python-dotenv, SPEC 7).
+- 2026-11-04: Judge sample: per locale, query counts split across the length buckets in
+  proportion (largest remainder), seed 0, capped by what exists (the fixture has 45 us + 15 es
+  test queries). Candidates go into the prompt in `product_id` order. The 30 batch-effect
+  queries are every k-th sampled query id. A query call is retried once (real providers only)
+  when a candidate is missing, duplicated or has a bad label; after that the pair is counted in
+  `n_missing`, not filled.
+- 2026-11-04: Judge cache `data/llm_cache/judge.jsonl` (fixtures: `data/fixtures_llm_cache/`),
+  append-only, keyed `batch:<query_id>` / `single:<query_id>:<product_id>`, so a run resumes.
+  `reports/judge_labels.parquet` has `label_human`, `label_judge` (batched) and `label_single`.
+- 2026-11-04: Kappa and accuracy CIs: query bootstrap (10,000 resamples, seed 0) over summed
+  per-query confusion matrices. System level uses only judged queries where every candidate got
+  a label (`n_dropped_incomplete` reported); it scores systems with `evaluate.run.score_system`,
+  so it covers whatever systems exist when `psr agreement` runs.
+
+UNVERIFIED (to move):
+- `llm/client.py` gemini and ollama providers: never called a real API. Check:
+  `uv run psr llm-ping` with `GEMINI_API_KEY` in `.env`.
+- `psr judge` and `psr agreement` on real data: never run. Check: `uv run psr judge` (about 150
+  batched calls plus about 660 single-pair calls; at 10 requests/min about 1.5 h, resumable),
+  then `uv run psr agreement` after dense, hybrid and ltr exist. P5 then has its **STOP**.
+- CI has no judge smoke step: it needs recorded replay fixtures. Check: `uv run psr --fixtures
+  judge --provider gemini --record`, commit `tests/fixtures/replay/`, then add `psr --fixtures
+  judge` and `psr --fixtures agreement` to `ci.yml`.
