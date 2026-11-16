@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
-Next: **chunk 3 (P2, P3)**
+Next: **chunk 3, P3 (LTR + MLflow)** (P2 done)
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -24,7 +24,7 @@ Between chunks: new session, `/check`, then `/build`.
 - [x] P0 Scaffold + data (repaired 2026-11-03: the `data/` ignore line had kept the
   `src/product_search_ranker/data/` package out of git; now `/data/`, package committed)
 - [x] P1 Metrics, statistics, BM25, eval runner
-- [ ] P2 Dense retrieval + hybrid (RRF)
+- [x] P2 Dense retrieval + hybrid (RRF) (2026-11-17: embeddings built for us and es, dense and hybrid rows in `reports/metrics.json`)
 - [ ] P3 Learning-to-rank + MLflow
 - [ ] P4 LLM client + query understanding (offline code merged 2026-11-16, tested with `replay`;
   real runs and the `ltr_qu` system (needs P3's `rank/features.py`) and `reports/qu.json` pending)
@@ -50,6 +50,21 @@ Test split, 2026-11-03. No query was excluded (`n_excluded` = 0 everywhere).
 | bm25 | us | 0.6997 | [0.6952, 0.704] | 0.7567 | 8,956 |
 | bm25 | es | 0.6772 | [0.6677, 0.6869] | 0.7569 | 2,417 |
 | bm25 | all | 0.6949 | [0.6909, 0.699] | 0.7568 | 11,373 |
+| dense | us | 0.7328 | [0.7286, 0.7371] | 0.797 | 8,956 |
+| dense | es | 0.7226 | [0.7135, 0.7315] | 0.8106 | 2,417 |
+| dense | all | 0.7307 | [0.7269, 0.7344] | 0.7999 | 11,373 |
+| hybrid | us | 0.7256 | [0.7214, 0.7298] | 0.7886 | 8,956 |
+| hybrid | es | 0.7116 | [0.7025, 0.7207] | 0.7973 | 2,417 |
+| hybrid | all | 0.7227 | [0.7189, 0.7265] | 0.7905 | 11,373 |
+
+Paired differences vs bm25 (all locales): dense +0.0358 [0.0325, 0.0391], hybrid +0.0278
+[0.0258, 0.0297]. Hybrid (RRF, k = 60) is below dense alone on every locale, so fusing with
+bm25 did not help here; it is reported as measured. Dense also leads bm25 on every slice
+(negation 0.586 vs 0.5624, number_or_unit 0.6992 vs 0.6582).
+Possible reasons hybrid trails dense, not measured: bm25 gives equal scores to candidates that
+share no query term, and RRF ranks such ties by `product_id`; the embeddings are fp16, so
+near-equal cosines can swap order. The RRF rule stays as SPEC 5.3 defines it (no change after
+seeing test numbers); `ltr` (P3) gets both ranks as features and can learn around either.
 
 bm25 by slice (all locales): negation 0.5624 [0.5476, 0.5772] (1,143 queries) is the weakest;
 number_or_unit 0.6582, len_6_plus 0.6717, brand_in_query 0.7235. Full table in
@@ -202,6 +217,11 @@ One line each: date, decision, reason.
   P2/P3 stay mostly in the main session (coupled code, leakage risk).
 - 2026-11-16: Docker Desktop with WSL integration works (Docker 29.8.2, Compose v5.5.1,
   `hello-world` ran), so L2 can start when P6 exists.
+- 2026-11-17: `psr embed` embedded all 649,866 products (us 482,105 in 448 s, es 167,761 in 151 s on
+  the RTX 4050, fp16, batch 512), under the 2.5 h limit, so no subset (SPEC 5.2). The first run
+  died when WSL crashed after shard 0 (host RAM and swap were nearly full, cause not confirmed);
+  the job resumes from saved shards. The VRAM guard now calls `empty_cache()` first: after the
+  us locale it counted its own cache as another program's and stopped before es.
 
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line

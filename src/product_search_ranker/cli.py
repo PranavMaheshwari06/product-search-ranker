@@ -32,6 +32,14 @@ def _index(args):
             bm25.build(locale, field, fixtures)
 
 
+def _embed(args):
+    from product_search_ranker.retrieval import dense
+
+    for locale in config.LOCALES:
+        dense.embed(locale, config.fixtures_mode(args.fixtures))
+    print("DONE psr embed", flush=True)
+
+
 def _eval(args):
     from product_search_ranker.evaluate.run import evaluate
 
@@ -96,6 +104,9 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("index", help="build the BM25 indexes (skips finished ones)")
     s.add_argument("--fields", default="all,title,bullets,brand,desc")
     s.set_defaults(func=_index)
+
+    s = sub.add_parser("embed", help="e5 product embeddings, GPU if present (resumable)")
+    s.set_defaults(func=_embed)
 
     s = sub.add_parser("eval", help="score a split and merge the results into metrics.json")
     s.add_argument("--systems", required=True, help="comma-separated, e.g. bm25")

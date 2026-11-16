@@ -32,7 +32,15 @@ def score_system(name: str, df: pd.DataFrame, fixtures: bool) -> np.ndarray:
         from product_search_ranker.retrieval import bm25
 
         return bm25.score(df, fixtures)
-    raise SystemExit(f"unknown system {name!r}; built so far: bm25")
+    if name == "dense":
+        from product_search_ranker.retrieval import dense
+
+        return dense.score(df, fixtures)
+    if name == "hybrid":
+        from product_search_ranker.retrieval import hybrid
+
+        return hybrid.score(df, fixtures)
+    raise SystemExit(f"unknown system {name!r}; built so far: bm25, dense, hybrid")
 
 
 def runs_dir(split: str, fixtures: bool) -> Path:
