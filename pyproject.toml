@@ -22,12 +22,13 @@ dependencies = [
     "prometheus-client",
     "mangum",
     "boto3",
-    "torch>=2.15.0",
-    "sentence-transformers>=6.2.0",
 ]
 
 [dependency-groups]
 dev = ["pytest", "ruff"]
+# torch comes from one of two groups: gpu (local, default) or cpu (CI, Docker, Lambda).
+gpu = ["torch>=2.15.0", "sentence-transformers>=6.2.0"]
+cpu = ["torch>=2.15.0", "sentence-transformers>=6.2.0"]
 
 [project.scripts]
 psr = "product_search_ranker.cli:main"
@@ -35,6 +36,27 @@ psr = "product_search_ranker.cli:main"
 [build-system]
 requires = ["uv_build>=0.11,<0.12"]
 build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev", "gpu"]
+environments = ["sys_platform == 'linux'"]
+conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", group = "cpu" },
+    { index = "pytorch-cu132", group = "gpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true
 
 [tool.ruff]
 line-length = 100

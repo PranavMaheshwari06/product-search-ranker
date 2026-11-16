@@ -5,22 +5,17 @@ on: [push, pull_request]
 jobs:
   python:
     runs-on: ubuntu-latest
+    env:
+      # `uv run` would otherwise re-sync to the default groups and pull the CUDA torch back in.
+      UV_NO_SYNC: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --frozen
+      - run: uv sync --frozen --no-group gpu --group cpu
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest -q
       - run: uv run psr --fixtures eval --systems bm25
       # The `psr --fixtures train` smoke step and `ltr` in the eval step are added in P3.
-
-  terraform:
-    runs-on: ubuntu-latest
-    if: hashFiles('deploy/terraform/aws/*.tf') != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform -chdir=deploy/terraform/aws fmt -check
-      - run: terraform -chdir=deploy/terraform/aws init -backend=false
-      - run: terraform -chdir=deploy/terraform/aws validate
+      # The terraform job (fmt, init -backend=false, validate) is added in P6, once
+      # deploy/terraform/aws exists: `hashFiles` is not allowed in a job-level `if`.

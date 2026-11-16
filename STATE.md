@@ -109,6 +109,19 @@ One line each: date, decision, reason.
 - 2026-11-04: torch from PyPI (CUDA build, 2.15.0+cu132) instead of the CPU index, so embeddings
   run on the local GPU; CI still runs on CPU. The wheel's CUDA 13.2 is newer than the 13.1 the
   driver (591.66) reports; fp16 kernels ran fine (same major version), so no `cuXXX` index.
+- 2026-11-05: All 20 GitHub Actions runs failed in 0 s with "workflow file issue", not a torch
+  problem: `hashFiles` is not allowed in a job-level `if`, so GitHub rejected `ci.yml` and started
+  no runner. The terraform job is removed (it returns in P6, once `deploy/terraform/aws` exists).
+  Check workflow files with `uvx --from actionlint-py actionlint .github/workflows/ci.yml`.
+- 2026-11-05: torch comes from two dependency groups, `gpu` (default, local; CUDA build from the
+  pytorch.org `cu132` index) and `cpu` (CI, Docker, Lambda; `cpu` index). Both lock torch 2.15.0,
+  so results do not depend on the variant. `cu130` (the driver's 13.1 match) only has torch up to
+  2.14.1 and `cu131` does not exist, so `cu132` stays; it ran fp16 correctly on the 13.1 driver.
+  If a CUDA kernel ever fails, switch the `gpu` index to `cu130` and the floor to 2.14. Local:
+  `uv sync`. CI: `uv sync --frozen --no-group gpu --group cpu` plus `UV_NO_SYNC=1` (else
+  `uv run` re-syncs to the GPU group). Lock restricted to Linux (`tool.uv.environments`).
+- 2026-11-05: AWS budget for L3 is at most 5 EUR in total. Design for it: Lambda and S3, no NAT
+  gateway, RDS or ECS, and an AWS Budgets alert before any `terraform apply`. Still a STOP at L3.
 - 2026-11-04: Dense embeddings (P2) are computed on the GPU in fp16 with batch size 512 (peak
   1.29 GB of 6.00 GB). This deviates from SPEC 5.2 ("on CPU"). The 2.5 h subset rule is applied to
   the measured GPU throughput: 0.18 h for all 649,866 products, so no subset. Serving (P7) still
@@ -135,12 +148,9 @@ One line each: date, decision, reason.
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
-- `.github/workflows/ci.yml`: never run on GitHub (now also has the
-  `psr --fixtures eval --systems bm25` smoke step, which passes locally). Check: push and read the
-  Actions run. `uv.lock` now has torch from PyPI (the CUDA wheel plus the nvidia-* runtime
-  packages, a much larger download than the CPU wheel) and `uv sync --frozen` works locally; that
-  the GitHub runner installs it, has the disk for it and still runs the tests on CPU is not
-  checked, and the install adds that large download to every CI run.
+- `.github/workflows/ci.yml`: every earlier run failed on the invalid terraform job (see Decision
+  log, 2026-11-05). Fixed and actionlint-clean; the exact CI commands pass locally in a scratch CPU
+  env. Not yet confirmed on a GitHub runner. Check: read the Actions run after the push.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.
