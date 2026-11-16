@@ -257,14 +257,17 @@ One line each: date, decision, reason.
   feature list or the embedding model name, not by rebuilt BM25 indexes or embeddings on the same
   data: delete `data/processed/features_*` after rebuilding either.
 
+- 2026-11-17: `PSR_GEMINI_MODEL=gemini-3.5-flash-lite` set in `.env`; `psr llm-ping` returned
+  `{'ok': True}` (15 input, 9 output tokens, 0.693 s). Chosen because the larger Flash models gave
+  503 or timeouts on 2026-11-16 (see above).
+
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
-- `llm/client.py` gemini provider: a real key was checked 2026-11-16 (see Decision log), but
-  `psr llm-ping` has not yet completed one call, because its auto-picked model
-  (`gemini-3.8-flash`) answered 503 or timed out. Check: set `PSR_GEMINI_MODEL` in `.env` to a
-  model that answers, then `uv run psr llm-ping`. The ollama provider was never called.
+- `llm/client.py` gemini provider: one real call completed on 2026-11-17 (`psr llm-ping`, model
+  `gemini-3.5-flash-lite`). Batched JSON calls (`psr qu`, `psr judge`) are not yet run. The ollama
+  provider was never called.
 - `psr judge` and `psr agreement` on real data: never run. Check: `uv run psr judge` (about 150
   batched calls plus about 660 single-pair calls; at 10 requests/min about 1.5 h, resumable),
   then `uv run psr agreement` after dense, hybrid and ltr exist. P5 then has its **STOP**.
