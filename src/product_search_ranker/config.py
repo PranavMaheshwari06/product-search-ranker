@@ -64,3 +64,51 @@ BOOTSTRAP_N = 10_000
 PERMUTATION_N = 10_000
 # Paired differences written to metrics.json whenever both systems have a run.
 COMPARISONS = (("dense", "bm25"), ("hybrid", "bm25"), ("ltr", "bm25"), ("ltr", "hybrid"))
+
+
+# LLM layer (SPEC 6). Read at call time so tests and `.env` can set them.
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+LLM_BACKOFF_S = (5, 15, 45)
+LLM_TIMEOUT_S = 120
+
+
+def load_dotenv() -> None:
+    """Copy KEY=VALUE lines from the git-ignored `.env` into the environment (never printed)."""
+    path = root() / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        key, sep, value = line.strip().partition("=")
+        if sep and not key.startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+def llm_provider(fixtures: bool = False) -> str:
+    return "replay" if fixtures else os.environ.get("PSR_LLM_PROVIDER", "gemini")
+
+
+def gemini_model() -> str | None:
+    """None until the user sets PSR_GEMINI_MODEL; `psr llm-ping` then picks the current Flash."""
+    return os.environ.get("PSR_GEMINI_MODEL") or None
+
+
+def ollama_model() -> str | None:
+    return os.environ.get("PSR_OLLAMA_MODEL") or None
+
+
+def llm_rpm() -> int:
+    return int(os.environ.get("PSR_LLM_RPM", "10"))
+
+
+def llm_prices() -> tuple[float, float] | None:
+    """USD per million input and output tokens, only when the user set both. Never guessed."""
+    p_in, p_out = os.environ.get("PSR_PRICE_IN_PER_M"), os.environ.get("PSR_PRICE_OUT_PER_M")
+    return (float(p_in), float(p_out)) if p_in and p_out else None
+
+
+def replay_dir() -> Path:
+    return root() / "tests" / "fixtures" / "replay"
+
+
+def llm_cache_dir(fixtures: bool = False) -> Path:
+    return root() / "data" / ("fixtures_llm_cache" if fixtures else "llm_cache")

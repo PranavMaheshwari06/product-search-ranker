@@ -26,8 +26,9 @@ Between chunks: new session, `/check`, then `/build`.
 - [x] P1 Metrics, statistics, BM25, eval runner
 - [ ] P2 Dense retrieval + hybrid (RRF)
 - [ ] P3 Learning-to-rank + MLflow
-- [ ] P4 LLM client + query understanding
-- [ ] P5 LLM judge vs human labels
+- [ ] P4 LLM client + query understanding (offline code merged 2026-11-16, tested with `replay`;
+  real runs and the `ltr_qu` system (needs P3's `rank/features.py`) and `reports/qu.json` pending)
+- [ ] P5 LLM judge vs human labels (offline code merged 2026-11-16; real runs pending)
 - [ ] P6 Airflow DAG, Docker, Compose, Terraform (AWS)
 - [ ] P7 API, UI, Lambda adapter, metrics endpoint
 - [ ] P8 README, design notes, decision memo, UNVERIFIED complete
@@ -109,18 +110,18 @@ One line each: date, decision, reason.
 - 2026-11-04: torch from PyPI (CUDA build, 2.15.0+cu132) instead of the CPU index, so embeddings
   run on the local GPU; CI still runs on CPU. The wheel's CUDA 13.2 is newer than the 13.1 the
   driver (591.66) reports; fp16 kernels ran fine (same major version), so no `cuXXX` index.
-- 2026-11-05: All 20 GitHub Actions runs failed in 0 s with "workflow file issue", not a torch
+- 2026-11-16: All 20 GitHub Actions runs failed in 0 s with "workflow file issue", not a torch
   problem: `hashFiles` is not allowed in a job-level `if`, so GitHub rejected `ci.yml` and started
   no runner. The terraform job is removed (it returns in P6, once `deploy/terraform/aws` exists).
   Check workflow files with `uvx --from actionlint-py actionlint .github/workflows/ci.yml`.
-- 2026-11-05: torch comes from two dependency groups, `gpu` (default, local; CUDA build from the
+- 2026-11-16: torch comes from two dependency groups, `gpu` (default, local; CUDA build from the
   pytorch.org `cu132` index) and `cpu` (CI, Docker, Lambda; `cpu` index). Both lock torch 2.15.0,
   so results do not depend on the variant. `cu130` (the driver's 13.1 match) only has torch up to
   2.14.1 and `cu131` does not exist, so `cu132` stays; it ran fp16 correctly on the 13.1 driver.
   If a CUDA kernel ever fails, switch the `gpu` index to `cu130` and the floor to 2.14. Local:
   `uv sync`. CI: `uv sync --frozen --no-group gpu --group cpu` plus `UV_NO_SYNC=1` (else
   `uv run` re-syncs to the GPU group). Lock restricted to Linux (`tool.uv.environments`).
-- 2026-11-05: AWS budget for L3 is at most 5 EUR in total. Design for it: Lambda and S3, no NAT
+- 2026-11-16: AWS budget for L3 is at most 5 EUR in total. Design for it: Lambda and S3, no NAT
   gateway, RDS or ECS, and an AWS Budgets alert before any `terraform apply`. Still a STOP at L3.
 - 2026-11-04: Dense embeddings (P2) are computed on the GPU in fp16 with batch size 512 (peak
   1.29 GB of 6.00 GB). This deviates from SPEC 5.2 ("on CPU"). The 2.5 h subset rule is applied to
@@ -141,16 +142,79 @@ One line each: date, decision, reason.
 - 2026-11-02: The `fixture` is sampled from train, val and test (not only train and test) in
   proportion per locale, so the fixture has validation queries for the LTR smoke run.
 - 2026-11-02: CI `ci.yml` has the lint and test steps only; the `psr --fixtures train` and
-  `eval` smoke steps are added when P1 and P3 create those commands. The terraform job skips
-  itself until `deploy/terraform/aws/*.tf` exists.
+  `eval` smoke steps are added when P1 and P3 create those commands. The terraform job was
+  meant to skip itself until `deploy/terraform/aws/*.tf` exists; it was invalid and is removed
+  (2026-11-16).
+
+- 2026-11-04: P4/P5 offline code built on branch `p4-p5-llm-code` in the cloud (merged into `main`
+  2026-11-16), in parallel with chunk 3; the user approved the change of order. The cloud proxy did not add a Gemini
+  key (`GET /v1beta/models` without a key answered 403), so the real runs are Stage L1, locally,
+  with `GEMINI_API_KEY` in `.env`.
+- 2026-11-04: Judge prompt uses the four ESCI label definitions verbatim from Reddy et al. 2022
+  (arXiv:2206.06588), read via Firecrawl because arxiv.org is blocked here. The same paper says
+  "we set gain values of 1.0, 0.1, 0.01, and 0.0" for E, S, C, I, matching `config.GAINS`.
+- 2026-11-04: `PSR_GEMINI_MODEL` has no default. `psr llm-ping` lists the models when it is unset
+  and picks the stable `gemini-<version>-flash` with the highest version (lite and preview
+  models left out), then says to put it in `.env` and log the name and date here.
+- 2026-11-04: `config.load_dotenv()` reads `.env` with the stdlib (no python-dotenv, SPEC 7).
+- 2026-11-04: Judge sample: per locale, query counts split across the length buckets in
+  proportion (largest remainder), seed 0, capped by what exists (the fixture has 45 us + 15 es
+  test queries). Candidates go into the prompt in `product_id` order. The 30 batch-effect
+  queries are every k-th sampled query id. A query call is retried once (real providers only)
+  when a candidate is missing, duplicated or has a bad label; after that the pair is counted in
+  `n_missing`, not filled.
+- 2026-11-04: Judge cache `data/llm_cache/judge.jsonl` (fixtures: `data/fixtures_llm_cache/`),
+  append-only, keyed `batch:<query_id>` / `single:<query_id>:<product_id>`, so a run resumes.
+  `reports/judge_labels.parquet` has `label_human`, `label_judge` (batched) and `label_single`.
+- 2026-11-04: Kappa and accuracy CIs: query bootstrap (10,000 resamples, seed 0) over summed
+  per-query confusion matrices. System level uses only judged queries where every candidate got
+  a label (`n_dropped_incomplete` reported); it scores systems with `evaluate.run.score_system`,
+  so it covers whatever systems exist when `psr agreement` runs.
+- 2026-11-04: Query understanding: hard = negation, number_or_unit or brand_in_query (brands
+  from the query's candidates). Batches of 20 queries from one locale, in query_id order.
+  Coverage on the real data: 8,954 queries (val 1,157, test 4,797, train sample 3,000), 448
+  batches. Items missing, duplicated or invalid get one retry call together; after that they
+  are cached empty and counted. `qu_features` lives in `query_understanding.py` so
+  `rank/features.py` (P3) only imports it: `qu_present`, `must_not_in_title`, `qu_brand_match`,
+  `qu_size_match` (size with spaces removed, not inside a longer number), `qu_color_match`,
+  `qu_type_in_title` (share of type words in the title); all 0 when a query has no output.
+- 2026-11-04: Judge and qu cache only items whose call got a reply. A call that fails outright
+  (network, quota, after the 5/15/45 s retries) writes nothing, so the next run asks again
+  instead of storing an empty result.
+- 2026-11-16: Gemini key checked with direct calls (the key itself never printed): model listing
+  works; `generateContent` returned a valid JSON reply on `gemini-3.5-flash-lite`,
+  `gemini-3.1-flash-lite`, `gemini-3-flash-preview` and `gemini-flash-lite-latest`, but 503 or a
+  read timeout on `gemini-3.5-flash` to `gemini-3.8-flash` and `gemini-flash-latest`, and
+  `gemini-2.5-flash` is closed to new users. `psr llm-ping` picks the highest stable Flash,
+  which is the overloaded `gemini-3.8-flash`, so it stalls for about 90 s per call on its
+  5/15/45 s retries. `PSR_GEMINI_MODEL` stays unset: chunk 4 re-tests the models, picks one
+  (the judge needs a model that is not a lite one if quality matters) and logs name and date
+  here. A first 403 ("API not used in project ... or disabled") was the API still switching on
+  after it was enabled; it cleared within minutes.
+- 2026-11-16: Chunk 3 embed job (P2) guards the GPU: `psr embed` reads free VRAM first
+  (`torch.cuda.mem_get_info`) and stops below 3 GiB free, saying what to close and to run
+  `nvidia-smi`. `/build` tells the user before it launches the ~11 min job and ends with a DONE
+  line in `logs/embed.log`. The user keeps the laptop plugged in and awake; the job resumes.
+- 2026-11-16: Docker Desktop with WSL integration works (Docker 29.8.2, Compose v5.5.1,
+  `hello-world` ran), so L2 can start when P6 exists.
 
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
-- `.github/workflows/ci.yml`: every earlier run failed on the invalid terraform job (see Decision
-  log, 2026-11-05). Fixed and actionlint-clean; the exact CI commands pass locally in a scratch CPU
-  env. Not yet confirmed on a GitHub runner. Check: read the Actions run after the push.
+- `llm/client.py` gemini provider: a real key was checked 2026-11-16 (see Decision log), but
+  `psr llm-ping` has not yet completed one call, because its auto-picked model
+  (`gemini-3.8-flash`) answered 503 or timed out. Check: set `PSR_GEMINI_MODEL` in `.env` to a
+  model that answers, then `uv run psr llm-ping`. The ollama provider was never called.
+- `psr judge` and `psr agreement` on real data: never run. Check: `uv run psr judge` (about 150
+  batched calls plus about 660 single-pair calls; at 10 requests/min about 1.5 h, resumable),
+  then `uv run psr agreement` after dense, hybrid and ltr exist. P5 then has its **STOP**.
+- `psr qu` on real data: never run. Check: `uv run psr qu --limit 40` first (2 calls), read
+  `data/llm_cache/qu.jsonl`, then `uv run psr qu` (448+ calls, about 45 min at 10 requests/min,
+  resumable).
+- CI has no judge smoke step: it needs recorded replay fixtures. Check: `uv run psr --fixtures
+  judge --provider gemini --record`, commit `tests/fixtures/replay/`, then add `psr --fixtures
+  judge` and `psr --fixtures agreement` to `ci.yml`.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.
