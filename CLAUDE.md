@@ -21,3 +21,14 @@ Rules
   network proxy; locally it comes from `.env` (git-ignored).
 - Anything written but not run (missing service, credentials, time) goes to UNVERIFIED in `STATE.md`.
 - Commit per phase with a short imperative message, then `git push`.
+
+Models and subagents (this section overrides the global "no subagents unless asked")
+- The main session (Opus for chunks 3-4, as `STATE.md` says) plans, writes the hard code, decides,
+  commits, edits `STATE.md` and handles every STOP line. Subagents never commit, push or edit `STATE.md`.
+- `impl` (Sonnet) builds one fully specified task: files, functions and tests named in the prompt.
+  Give it the task, the SPEC sections and the gate; do not hand it a whole phase.
+- `gatecheck` (Haiku, read-only) runs gates and greps and reports pass or fail. It does not review
+  leakage, statistics or design.
+- Reviewers are the `ecc:*` agents named per phase in `docs/CHECKS.md`; run them with a Sonnet model.
+- Each subagent starts cold: fewer, larger tasks beat many small ones. Anything coupled across
+  modules (dense + hybrid + LTR features, the leakage test) stays in the main session.

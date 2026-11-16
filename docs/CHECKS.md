@@ -22,3 +22,17 @@ uv run pytest -q
 | P6 | gate tests (pass, fail, first run); `docker compose -f deploy/compose.yaml build`; `docker compose -f deploy/compose.yaml run --rm airflow airflow dags test psr_daily 2026-01-01` succeeds with `PSR_DATA_MODE=fixtures`; `terraform -chdir=deploy/terraform/aws fmt -check`, `init -backend=false`, `validate` |
 | P7 | API tests (TestClient, fixture demo index): `/search` returns k items, `/explain` returns one value per feature, `/metrics` has the metric names; `docker run` of the API image answers `curl localhost:8000/search?q=usb+cable` |
 | P8 | `grep` of README and `docs/` for numbers: each one appears in a `reports/*.json`; no banned words (CLAUDE.md); UNVERIFIED list complete |
+
+## Routing per phase
+Main session: plans, hard code, commits, STOP lines. `impl` = Sonnet subagent for self-contained
+tasks. Every phase also gets `ecc:python-reviewer` and `ecc:silent-failure-hunter`, and `gatecheck`
+(Haiku) runs the gates.
+
+| Phase | Main session (Opus) | Delegate to `impl` | Extra reviewer |
+|---|---|---|---|
+| P2 dense + hybrid | embedding job, dense and hybrid retrieval | CLI wiring, RRF function | `ecc:rag-pipeline-reviewer` |
+| P3 LTR + MLflow | features, leakage test, grid | importance plot, grid runner | `ecc:mle-reviewer` |
+| P4, P5 real LLM runs | model choice, runs, STOP | none | none |
+| P6 Docker, Airflow, Terraform | plan | Dockerfile, DAG, terraform files | `ecc:security-reviewer` |
+| P7 API, UI | plan | endpoints, UI | `ecc:fastapi-reviewer`, `ecc:security-reviewer` |
+| P8 docs | numbers from `reports/*.json` | README, notes, memo drafts | `ecc:comment-analyzer` |

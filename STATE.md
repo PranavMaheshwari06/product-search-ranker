@@ -195,6 +195,11 @@ One line each: date, decision, reason.
   (`torch.cuda.mem_get_info`) and stops below 3 GiB free, saying what to close and to run
   `nvidia-smi`. `/build` tells the user before it launches the ~11 min job and ends with a DONE
   line in `logs/embed.log`. The user keeps the laptop plugged in and awake; the job resumes.
+- 2026-11-16: Model routing (user-approved): main session (Opus) plans, writes hard code, commits
+  and handles STOP lines; `.claude/agents/impl.md` (Sonnet) builds self-contained tasks;
+  `.claude/agents/gatecheck.md` (Haiku, read-only) runs gates; `ecc:*` reviewers per phase. `/build`
+  now plans first and stops for the user's OK. Routing table in `docs/CHECKS.md`, rule in `CLAUDE.md`.
+  P2/P3 stay mostly in the main session (coupled code, leakage risk).
 - 2026-11-16: Docker Desktop with WSL integration works (Docker 29.8.2, Compose v5.5.1,
   `hello-world` ran), so L2 can start when P6 exists.
 
