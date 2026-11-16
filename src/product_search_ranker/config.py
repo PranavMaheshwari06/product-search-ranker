@@ -59,6 +59,10 @@ def indexes_dir(fixtures: bool = False) -> Path:
     return root() / "indexes" / ("fixtures" if fixtures else "")
 
 
+def models_dir(fixtures: bool = False) -> Path:
+    return root() / "models" / ("fixtures" if fixtures else "")
+
+
 K = 10
 BOOTSTRAP_N = 10_000
 PERMUTATION_N = 10_000

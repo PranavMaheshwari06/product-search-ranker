@@ -27,7 +27,7 @@ def load_split(split: str, fixtures: bool = False) -> pd.DataFrame:
     return pd.read_parquet(path, columns=COLUMNS)
 
 
-def score_system(name: str, df: pd.DataFrame, fixtures: bool) -> np.ndarray:
+def score_system(name: str, df: pd.DataFrame, fixtures: bool, split: str = "test") -> np.ndarray:
     if name == "bm25":
         from product_search_ranker.retrieval import bm25
 
@@ -40,7 +40,11 @@ def score_system(name: str, df: pd.DataFrame, fixtures: bool) -> np.ndarray:
         from product_search_ranker.retrieval import hybrid
 
         return hybrid.score(df, fixtures)
-    raise SystemExit(f"unknown system {name!r}; built so far: bm25, dense, hybrid")
+    if name == "ltr":
+        from product_search_ranker.rank import ltr
+
+        return ltr.score(df, split, fixtures)
+    raise SystemExit(f"unknown system {name!r}; built so far: bm25, dense, hybrid, ltr")
 
 
 def runs_dir(split: str, fixtures: bool) -> Path:
@@ -110,7 +114,7 @@ def evaluate(systems: list[str], split: str = "test", fixtures: bool = False) ->
     runs = runs_dir(split, fixtures)
     runs.mkdir(parents=True, exist_ok=True)
     for name in systems:
-        pq = metrics.per_query(df, score_system(name, df, fixtures))
+        pq = metrics.per_query(df, score_system(name, df, fixtures, split))
         pq.to_parquet(runs / f"{name}.parquet", index=False)
         print(f"wrote {runs / f'{name}.parquet'}")
 

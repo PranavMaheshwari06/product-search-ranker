@@ -40,6 +40,13 @@ def _embed(args):
     print("DONE psr embed", flush=True)
 
 
+def _train(args):
+    from product_search_ranker.rank import ltr
+
+    ltr.train(config.fixtures_mode(args.fixtures))
+    print("DONE psr train", flush=True)
+
+
 def _eval(args):
     from product_search_ranker.evaluate.run import evaluate
 
@@ -107,6 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("embed", help="e5 product embeddings, GPU if present (resumable)")
     s.set_defaults(func=_embed)
+
+    s = sub.add_parser("train", help="LTR features, grid on val, MLflow runs, models/ltr.txt")
+    s.set_defaults(func=_train)
 
     s = sub.add_parser("eval", help="score a split and merge the results into metrics.json")
     s.add_argument("--systems", required=True, help="comma-separated, e.g. bm25")

@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
-Next: **chunk 3, P3 (LTR + MLflow)** (P2 done)
+Next: **chunk 4 (P4, P5 real LLM runs)** (chunk 3: P2 and P3 done)
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -25,7 +25,7 @@ Between chunks: new session, `/check`, then `/build`.
   `src/product_search_ranker/data/` package out of git; now `/data/`, package committed)
 - [x] P1 Metrics, statistics, BM25, eval runner
 - [x] P2 Dense retrieval + hybrid (RRF) (2026-11-17: embeddings built for us and es, dense and hybrid rows in `reports/metrics.json`)
-- [ ] P3 Learning-to-rank + MLflow
+- [x] P3 Learning-to-rank + MLflow (2026-11-17: grid on val, `ltr` row and comparisons in `reports/metrics.json`)
 - [ ] P4 LLM client + query understanding (offline code merged 2026-11-16, tested with `replay`;
   real runs and the `ltr_qu` system (needs P3's `rank/features.py`) and `reports/qu.json` pending)
 - [ ] P5 LLM judge vs human labels (offline code merged 2026-11-16; real runs pending)
@@ -65,6 +65,23 @@ Possible reasons hybrid trails dense, not measured: bm25 gives equal scores to c
 share no query term, and RRF ranks such ties by `product_id`; the embeddings are fp16, so
 near-equal cosines can swap order. The RRF rule stays as SPEC 5.3 defines it (no change after
 seeing test numbers); `ltr` (P3) gets both ranks as features and can learn around either.
+
+ltr (LightGBM lambdarank, 20 features, SPEC 5.4), test split, 2026-11-17:
+
+| System | Locale | NDCG@10 | 95% CI | MRR | Queries |
+|---|---|---|---|---|---|
+| ltr | us | 0.7438 | [0.7397, 0.748] | 0.8083 | 8,956 |
+| ltr | es | 0.7353 | [0.7264, 0.7439] | 0.8232 | 2,417 |
+| ltr | all | 0.742 | [0.7383, 0.7458] | 0.8115 | 11,373 |
+
+Paired differences (all locales): ltr vs bm25 +0.0471 [0.044, 0.0502]; ltr vs hybrid +0.0193
+[0.0172, 0.0214]. ltr is above dense on every slice in `reports/metrics.json` (negation 0.599 vs
+0.586, number_or_unit 0.7199 vs 0.6992, brand_in_query 0.7752 vs 0.762); there is no saved
+paired test for ltr vs dense. The 8 grid configs scored 0.7377 to 0.7391 on val, so the config
+choice barely matters; the best (`num_leaves` 63, `learning_rate` 0.1, `min_data_in_leaf` 200,
+70 rounds) scored 0.7391. Most important features by gain: `dense_rank`, `dense_cos`,
+`rrf_score`, `query_tokens_in_title`, `title_len`, `n_candidates` (`reports/ltr_importance.png`).
+Timing: feature build for train + val took under 2 minutes, the grid about 4 minutes.
 
 bm25 by slice (all locales): negation 0.5624 [0.5476, 0.5772] (1,143 queries) is the weakest;
 number_or_unit 0.6582, len_6_plus 0.6717, brand_in_query 0.7235. Full table in
@@ -222,6 +239,23 @@ One line each: date, decision, reason.
   died when WSL crashed after shard 0 (host RAM and swap were nearly full, cause not confirmed);
   the job resumes from saved shards. The VRAM guard now calls `empty_cache()` first: after the
   us locale it counted its own cache as another program's and stopped before es.
+
+- 2026-11-17: `n_bullets` is replaced by `bullet_len` (`bullet_raw_len`): `prepare` joins the
+  bullets into one string, so their count is not recoverable. Everything else in the SPEC 5.4
+  feature list is as written.
+- 2026-11-17: the grid keeps the best grid model (same seed, `deterministic`) instead of
+  retraining the best config once more, which would give the same model.
+- 2026-11-17: MLflow 3.17 refuses a file store unless `MLFLOW_ALLOW_FILE_STORE=true`; `ltr.train`
+  sets it, because SPEC 5.4 asks for the `./mlruns` file store.
+- 2026-11-17: P4's `ltr_qu` needs `rank/features.py` (now present) and the 20-feature table
+  `features_<split>.parquet` as its base.
+
+- 2026-11-17: known limits of `psr train`, from the P3 review: LightGBM stops early on its own
+  `ndcg@10` (counts a query with no relevant item as 1) while the config is chosen with the
+  project metric; val is used for both, so the val score 0.7391 is slightly optimistic and is not
+  cited as an estimate (the test row is). The feature cache is invalidated by `data_sha`, the
+  feature list or the embedding model name, not by rebuilt BM25 indexes or embeddings on the same
+  data: delete `data/processed/features_*` after rebuilding either.
 
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
