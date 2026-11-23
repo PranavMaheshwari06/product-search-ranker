@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
-Next: **chunk 4, P5 (judge run, agreement, STOP)** (P4 done 2026-11-24)
+Next: **STOP: user reads `reports/judge.json`**, then chunk 5 (P6, Sonnet) (chunk 4: P4 and P5 done)
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -28,7 +28,8 @@ Between chunks: new session, `/check`, then `/build`.
 - [x] P3 Learning-to-rank + MLflow (2026-11-17: grid on val, `ltr` row and comparisons in `reports/metrics.json`)
 - [x] P4 LLM client + query understanding (2026-11-24: real `psr qu` on 8,954 hard queries,
   `ltr_qu` row in `reports/metrics.json`, `reports/qu.json`)
-- [ ] P5 LLM judge vs human labels (offline code merged 2026-11-16; real runs pending)
+- [x] P5 LLM judge vs human labels (2026-11-24: 150 test queries, 3,391 pairs, `reports/judge.json`;
+  **STOP** open until the user has read it)
 - [ ] P6 Airflow DAG, Docker, Compose, Terraform (AWS)
 - [ ] P7 API, UI, Lambda adapter, metrics endpoint
 - [ ] P8 README, design notes, decision memo, UNVERIFIED complete
@@ -36,7 +37,8 @@ Between chunks: new session, `/check`, then `/build`.
 ## Stage L (VS Code, personal laptop)
 - [x] L0 Clone, `uv sync`, gates green, work through UNVERIFIED (2026-11-04: torch and
   sentence-transformers added, BM25 indexes rebuilt, bm25 test row reproduced)
-- [ ] L1 Only if the cloud Gemini key failed: real judge + query-understanding runs (user reviews)
+- [x] L1 Only if the cloud Gemini key failed: real judge + query-understanding runs (user reviews)
+  (2026-11-24, done as chunk 4 on this machine)
 - [ ] L2 `docker compose up`, one full DAG run, screenshot of the run history
 - [ ] L3 AWS: **STOP**, user sets the budget; `terraform apply`, publish, live URL, 2-min video
 - [ ] L4 Final README numbers; user reviews the repo before it goes public
@@ -99,6 +101,26 @@ is in us; es shows no measurable change. Every hard test query got an extraction
 MRR 0.8153; vs ltr +0.004 [0.0029, 0.0051]. Biggest slice change: negation 0.599 -> 0.6249.
 The `qu_*` features rank low by gain (`reports/ltr_qu_importance.png`); the dense and RRF
 features still lead. Re-scoring ltr in the same call reproduced `ltr.parquet` byte for byte.
+
+LLM judge vs human labels (`gemini-3.5-flash-lite`, 150 test queries: 100 us, 50 es; 3,391
+pairs, 0 missing), 2026-11-24, from `reports/judge.json`:
+
+| Locale | Pairs | Accuracy | 95% CI | Kappa (4-class) | 95% CI | Kappa E vs rest | 95% CI |
+|---|---|---|---|---|---|---|---|
+| us | 2,078 | 0.5563 | [0.5136, 0.5978] | 0.3585 | [0.2995, 0.413] | 0.4678 | [0.3942, 0.5392] |
+| es | 1,313 | 0.6474 | [0.577, 0.7125] | 0.4849 | [0.3928, 0.5719] | 0.6513 | [0.5708, 0.7232] |
+| all | 3,391 | 0.5916 | [0.5529, 0.6294] | 0.4111 | [0.357, 0.4615] | 0.5409 | [0.4827, 0.5957] |
+
+System level on the 150 judged queries (NDCG@10, human labels / judge labels): bm25 0.7015 /
+0.7375, dense 0.7279 / 0.7699, hybrid 0.7281 / 0.7689, ltr 0.7412 / 0.784, ltr_qu 0.7425 /
+0.7903. Kendall tau 0.8, same winner (ltr_qu). The judge gets the sign of 9 of 10 system pairs
+right, and 3 of 3 of the pairs whose human-label CI excludes 0; the one it flips is dense vs
+hybrid (human delta -0.0017, CI [-0.0205, 0.0164]). The judge scores every system higher than
+the human labels do. Batch effect (30 queries, 545 pairs, batched vs one pair per call):
+accuracy 0.7688 [0.7119, 0.8194], kappa 0.6677 [0.5785, 0.7392]. Usage: 695 calls, 849,830
+input and 93,918 output tokens, latency p50 5.996 s, p95 6.822 s; no cost (prices unset).
+Several of the 20 disagreement examples look like human-label errors (e.g. "1 1/4” npt": 1/4"
+fittings labelled E by humans, I by the judge); not counted, so not claimed as a number.
 
 bm25 by slice (all locales): negation 0.5624 [0.5476, 0.5772] (1,143 queries) is the weakest;
 number_or_unit 0.6582, len_6_plus 0.6717, brand_in_query 0.7235. Full table in
@@ -295,15 +317,15 @@ One line each: date, decision, reason.
 - 2026-11-24: Judge writes a batch-check query's single-pair records only when all its pairs are
   done, so a crash inside such a query repeats up to about 20 calls on the next run. Left as is.
 
+- 2026-11-24: P5 had no code changes (judge and agreement code merged 2026-11-16 and reviewed
+  then), so no reviewer run this phase; gates ran on the real outputs.
+
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
 - `llm/client.py` ollama provider: never called (gemini ran for `psr qu` on 2026-11-24). Check:
   `PSR_LLM_PROVIDER=ollama uv run psr llm-ping` with a local Ollama.
-- `psr judge` and `psr agreement` on real data: never run. Check: `uv run psr judge` (about 150
-  batched calls plus about 660 single-pair calls; at 10 requests/min about 1.5 h, resumable),
-  then `uv run psr agreement` after dense, hybrid and ltr exist. P5 then has its **STOP**.
 - CI has no judge smoke step: it needs recorded replay fixtures. Check: `uv run psr --fixtures
   judge --provider gemini --record`, commit `tests/fixtures/replay/`, then add `psr --fixtures
   judge` and `psr --fixtures agreement` to `ci.yml`.

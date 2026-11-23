@@ -1,0 +1,526 @@
+{
+  "date": "2026-11-24",
+  "model": "gemini-3.5-flash-lite",
+  "provider": [
+    "gemini"
+  ],
+  "n_calls": 695,
+  "input_tokens": 849830,
+  "output_tokens": 93918,
+  "latency_s_p50": 5.996,
+  "latency_s_p95": 6.822,
+  "cost_usd": null,
+  "n_queries": 150,
+  "n_pairs": 3391,
+  "n_missing": 0,
+  "pair_level": {
+    "us": {
+      "n_pairs": 2078,
+      "n_queries": 100,
+      "accuracy": {
+        "value": 0.5563,
+        "ci95": [
+          0.5136,
+          0.5978
+        ]
+      },
+      "kappa": {
+        "value": 0.3585,
+        "ci95": [
+          0.2995,
+          0.413
+        ]
+      },
+      "kappa_exact_vs_rest": {
+        "value": 0.4678,
+        "ci95": [
+          0.3942,
+          0.5392
+        ]
+      },
+      "confusion": [
+        [
+          520,
+          237,
+          13,
+          162
+        ],
+        [
+          83,
+          338,
+          12,
+          217
+        ],
+        [
+          6,
+          7,
+          27,
+          20
+        ],
+        [
+          30,
+          92,
+          43,
+          271
+        ]
+      ]
+    },
+    "es": {
+      "n_pairs": 1313,
+      "n_queries": 50,
+      "accuracy": {
+        "value": 0.6474,
+        "ci95": [
+          0.577,
+          0.7125
+        ]
+      },
+      "kappa": {
+        "value": 0.4849,
+        "ci95": [
+          0.3928,
+          0.5719
+        ]
+      },
+      "kappa_exact_vs_rest": {
+        "value": 0.6513,
+        "ci95": [
+          0.5708,
+          0.7232
+        ]
+      },
+      "confusion": [
+        [
+          443,
+          123,
+          24,
+          34
+        ],
+        [
+          30,
+          251,
+          17,
+          142
+        ],
+        [
+          8,
+          27,
+          79,
+          6
+        ],
+        [
+          7,
+          30,
+          15,
+          77
+        ]
+      ]
+    },
+    "all": {
+      "n_pairs": 3391,
+      "n_queries": 150,
+      "accuracy": {
+        "value": 0.5916,
+        "ci95": [
+          0.5529,
+          0.6294
+        ]
+      },
+      "kappa": {
+        "value": 0.4111,
+        "ci95": [
+          0.357,
+          0.4615
+        ]
+      },
+      "kappa_exact_vs_rest": {
+        "value": 0.5409,
+        "ci95": [
+          0.4827,
+          0.5957
+        ]
+      },
+      "confusion": [
+        [
+          963,
+          360,
+          37,
+          196
+        ],
+        [
+          113,
+          589,
+          29,
+          359
+        ],
+        [
+          14,
+          34,
+          106,
+          26
+        ],
+        [
+          37,
+          122,
+          58,
+          348
+        ]
+      ]
+    }
+  },
+  "system_level": {
+    "n_queries": 150,
+    "n_dropped_incomplete": 0,
+    "systems": {
+      "bm25": {
+        "human": 0.7015,
+        "judge": 0.7375,
+        "n_queries": 150
+      },
+      "dense": {
+        "human": 0.7279,
+        "judge": 0.7699,
+        "n_queries": 150
+      },
+      "hybrid": {
+        "human": 0.7281,
+        "judge": 0.7689,
+        "n_queries": 150
+      },
+      "ltr": {
+        "human": 0.7412,
+        "judge": 0.784,
+        "n_queries": 150
+      },
+      "ltr_qu": {
+        "human": 0.7425,
+        "judge": 0.7903,
+        "n_queries": 150
+      }
+    },
+    "kendall_tau": 0.8,
+    "same_winner": true,
+    "pairs": [
+      {
+        "a": "bm25",
+        "b": "dense",
+        "human_delta": -0.0243,
+        "human_ci95": [
+          -0.051,
+          0.0035
+        ],
+        "judge_delta": -0.0324,
+        "same_sign": true,
+        "human_ci_excludes_0": false
+      },
+      {
+        "a": "bm25",
+        "b": "hybrid",
+        "human_delta": -0.0259,
+        "human_ci95": [
+          -0.0402,
+          -0.0111
+        ],
+        "judge_delta": -0.0315,
+        "same_sign": true,
+        "human_ci_excludes_0": true
+      },
+      {
+        "a": "bm25",
+        "b": "ltr",
+        "human_delta": -0.0371,
+        "human_ci95": [
+          -0.0619,
+          -0.0119
+        ],
+        "judge_delta": -0.0465,
+        "same_sign": true,
+        "human_ci_excludes_0": true
+      },
+      {
+        "a": "bm25",
+        "b": "ltr_qu",
+        "human_delta": -0.0389,
+        "human_ci95": [
+          -0.0647,
+          -0.0133
+        ],
+        "judge_delta": -0.0528,
+        "same_sign": true,
+        "human_ci_excludes_0": true
+      },
+      {
+        "a": "dense",
+        "b": "hybrid",
+        "human_delta": -0.0017,
+        "human_ci95": [
+          -0.0205,
+          0.0164
+        ],
+        "judge_delta": 0.0009,
+        "same_sign": false,
+        "human_ci_excludes_0": false
+      },
+      {
+        "a": "dense",
+        "b": "ltr",
+        "human_delta": -0.0128,
+        "human_ci95": [
+          -0.0268,
+          0.001
+        ],
+        "judge_delta": -0.0141,
+        "same_sign": true,
+        "human_ci_excludes_0": false
+      },
+      {
+        "a": "dense",
+        "b": "ltr_qu",
+        "human_delta": -0.0147,
+        "human_ci95": [
+          -0.0306,
+          0.0004
+        ],
+        "judge_delta": -0.0204,
+        "same_sign": true,
+        "human_ci_excludes_0": false
+      },
+      {
+        "a": "hybrid",
+        "b": "ltr",
+        "human_delta": -0.0111,
+        "human_ci95": [
+          -0.0291,
+          0.0069
+        ],
+        "judge_delta": -0.015,
+        "same_sign": true,
+        "human_ci_excludes_0": false
+      },
+      {
+        "a": "hybrid",
+        "b": "ltr_qu",
+        "human_delta": -0.013,
+        "human_ci95": [
+          -0.033,
+          0.0068
+        ],
+        "judge_delta": -0.0213,
+        "same_sign": true,
+        "human_ci_excludes_0": false
+      },
+      {
+        "a": "ltr",
+        "b": "ltr_qu",
+        "human_delta": -0.0019,
+        "human_ci95": [
+          -0.0104,
+          0.0069
+        ],
+        "judge_delta": -0.0063,
+        "same_sign": true,
+        "human_ci_excludes_0": false
+      }
+    ],
+    "same_sign": {
+      "all": "9/10",
+      "human_ci_excludes_0": "3/3"
+    },
+    "wrong_winner_pairs": [
+      "dense vs hybrid"
+    ]
+  },
+  "batch_effect": {
+    "n_pairs": 545,
+    "n_queries": 30,
+    "accuracy": {
+      "value": 0.7688,
+      "ci95": [
+        0.7119,
+        0.8194
+      ]
+    },
+    "kappa": {
+      "value": 0.6677,
+      "ci95": [
+        0.5785,
+        0.7392
+      ]
+    },
+    "kappa_exact_vs_rest": {
+      "value": 0.8147,
+      "ci95": [
+        0.722,
+        0.8829
+      ]
+    },
+    "confusion": [
+      [
+        128,
+        10,
+        0,
+        1
+      ],
+      [
+        23,
+        120,
+        3,
+        27
+      ],
+      [
+        0,
+        4,
+        23,
+        0
+      ],
+      [
+        6,
+        48,
+        4,
+        148
+      ]
+    ]
+  },
+  "examples": [
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Parker A-Lok 4MSC4N-316 316 Stainless Steel Tube Fitting, Adapter, 1/4\" Tube OD x 1/4\" NPT Male",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Lead Free Pipe Fitting, Hex Bushing, 3/4\" NPT Male X 1/4\" NPT Female",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Supply Giant CSCV1000 1 in. Male X 1/4 in. Female NPT Lead Free Bushing, Fitting with Hexagonal Head, Brass Construction, Higher Corrosion Resistance Economical & Easy to Install, 19",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "EDGE INDUSTRIAL Brass REDUCING HEX Bushing 1\" Male NPT X 1/4\" Female NPT Fuel / AIR/ Water / Oil/ Gas WOG (Qty 01)",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Nigo Industrial Co. Brass Pipe Fitting, Hex Bushing Reducer, Nominal Pipe Size: 1/2\" NPT Male x 1/4\" NPT Female",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Nigo Industrial Co. Brass Hose Fitting, Connector (1/4\" Barb x 1/4\" NPT Female, 1)",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "TAILONZ PNEUMATIC Male Straight 1/4 Inch Tube OD x 1/4 Inch NPT Thread Push to Connect Fitting PC-1/4-N2 (Pack of 10)",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "TAILONZ PNEUMATIC 3 Pack SL-1/4-N1 Push to Connect Air Line Fitting Air Flow Control Valve 1/4 Inch od 1/8 Inch Npt Elbow 90 Degree Air Speed Control Valve Fitting Push Lock",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Nigo Brass Pipe Fitting, Forged Brass Tee, 3-Way, NPT Female X NPT Female X NPT Male (1, 1/4\" x 1/4\" x 1/4\")",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 1/4” npt",
+      "locale": "us",
+      "title": "Minimprover 20 PCS Solid Brass Pipe Fitting and Air Hose End Fitings,1/4\" NPT Male to 1/4\" Barb,Hose Barb Thread Pipe Adapter",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 item received second item not in package",
+      "locale": "us",
+      "title": "Frito-Lay Snacks Variety Pack 35, Classic Mix, 1 Count",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 item received second item not in package",
+      "locale": "us",
+      "title": "Softsoap Moisturizing Liquid Hand Soap, Soothing Clean Aloe Vera - 7.5 Fluid Ounces (6 Pack)",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 item received second item not in package",
+      "locale": "us",
+      "title": "Orajel Baby Daytime and Nighttime Non-Medicated Cooling Gels for Teething, 2 tubes, 0.18 oz each",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "1 turbante para rizos sin calor",
+      "locale": "es",
+      "title": "Cinta rizada sin calor Tik Tok - Conjunto de rizos para el cabello sin calor - Barra de curling - Pinza para el cabello (rosa)",
+      "human": "I",
+      "judge": "E"
+    },
+    {
+      "query": "1-year old toys",
+      "locale": "us",
+      "title": "Nuby Floating Purple Octopus with 3 Hoopla Rings Interactive Bath Toy",
+      "human": "I",
+      "judge": "E"
+    },
+    {
+      "query": "100% remy hair bundles without weft for box braids",
+      "locale": "us",
+      "title": "GOO GOO 24 inch Clip in Hair Extensions Balayage Chocolate Brown to Caramel Blonde Remy Clip in Human Hair Extensions Straight Balayage Real Natural Hair Extensions 120g 7pcs",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "100% remy hair bundles without weft for box braids",
+      "locale": "us",
+      "title": "Anrosa Afro Kinky Clip in Human Hair Extension 1B Natural Black Clip in Hair for Black Woman 3C 4A Thick Type Real Remy Human Hair 120 Gram 10-22 Inch (16 Inch, Afro Curly))",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "100% remy hair bundles without weft for box braids",
+      "locale": "us",
+      "title": "Ombre Pre Stretched Braiding Hair, 28''-6 packs Ombre Yaki texture Braid Hair Extensions, 100% Quality Kanekalon Synthetic Colorful Hair Braids (pack of 6, 1b-30-27)",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "120 luces sin cables exterior",
+      "locale": "es",
+      "title": "SOAIY [Versión Mejorada] 3PCS Luces Led a Pilas Blanco Cálido, Lámpara con Sensor al Tacto sin Cable, Luz Led Adhesiva con Iman para Armarios, Habitación del Niño, Cocina, Refrigerador",
+      "human": "E",
+      "judge": "I"
+    },
+    {
+      "query": "120 luces sin cables exterior",
+      "locale": "es",
+      "title": "Racokky 24 LEDs USB Recargable Magnético Movimiento Sensor Luces Nocturnas, Oscuridad a amanecer Célula fotoeléctrica incluido Auto en/apagado Portátil Sin cable, palo en cualquier sitio para Armario",
+      "human": "E",
+      "judge": "I"
+    }
+  ]
+}
