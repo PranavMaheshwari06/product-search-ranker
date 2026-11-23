@@ -67,7 +67,13 @@ K = 10
 BOOTSTRAP_N = 10_000
 PERMUTATION_N = 10_000
 # Paired differences written to metrics.json whenever both systems have a run.
-COMPARISONS = (("dense", "bm25"), ("hybrid", "bm25"), ("ltr", "bm25"), ("ltr", "hybrid"))
+COMPARISONS = (
+    ("dense", "bm25"),
+    ("hybrid", "bm25"),
+    ("ltr", "bm25"),
+    ("ltr", "hybrid"),
+    ("ltr_qu", "ltr"),
+)
 
 
 # LLM layer (SPEC 6). Read at call time so tests and `.env` can set them.

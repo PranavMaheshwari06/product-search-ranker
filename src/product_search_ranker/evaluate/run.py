@@ -40,11 +40,11 @@ def score_system(name: str, df: pd.DataFrame, fixtures: bool, split: str = "test
         from product_search_ranker.retrieval import hybrid
 
         return hybrid.score(df, fixtures)
-    if name == "ltr":
+    if name in ("ltr", "ltr_qu"):
         from product_search_ranker.rank import ltr
 
-        return ltr.score(df, split, fixtures)
-    raise SystemExit(f"unknown system {name!r}; built so far: bm25, dense, hybrid, ltr")
+        return ltr.score(df, split, fixtures, name)
+    raise SystemExit(f"unknown system {name!r}; built so far: bm25, dense, hybrid, ltr, ltr_qu")
 
 
 def runs_dir(split: str, fixtures: bool) -> Path:
@@ -110,6 +110,8 @@ def data_sha(fixtures: bool) -> str:
 
 
 def evaluate(systems: list[str], split: str = "test", fixtures: bool = False) -> Path:
+    if "ltr_qu" in systems and "ltr" not in systems:
+        raise SystemExit("ltr_qu is compared with ltr from the same call: --systems ltr,ltr_qu")
     df = load_split(split, fixtures)
     runs = runs_dir(split, fixtures)
     runs.mkdir(parents=True, exist_ok=True)
@@ -160,4 +162,8 @@ def evaluate(systems: list[str], split: str = "test", fixtures: bool = False) ->
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2) + "\n")
     print(f"wrote {path}")
+    if "ltr_qu" in systems and split == "test":
+        from product_search_ranker.llm import query_understanding as qu
+
+        print(f"wrote {qu.write_report(df, all_runs, fixtures)}")
     return path

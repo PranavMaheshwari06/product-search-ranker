@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
-Next: **chunk 4 (P4, P5 real LLM runs)** (chunk 3: P2 and P3 done)
+Next: **chunk 4, P5 (judge run, agreement, STOP)** (P4 done 2026-11-24)
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -26,8 +26,8 @@ Between chunks: new session, `/check`, then `/build`.
 - [x] P1 Metrics, statistics, BM25, eval runner
 - [x] P2 Dense retrieval + hybrid (RRF) (2026-11-17: embeddings built for us and es, dense and hybrid rows in `reports/metrics.json`)
 - [x] P3 Learning-to-rank + MLflow (2026-11-17: grid on val, `ltr` row and comparisons in `reports/metrics.json`)
-- [ ] P4 LLM client + query understanding (offline code merged 2026-11-16, tested with `replay`;
-  real runs and the `ltr_qu` system (needs P3's `rank/features.py`) and `reports/qu.json` pending)
+- [x] P4 LLM client + query understanding (2026-11-24: real `psr qu` on 8,954 hard queries,
+  `ltr_qu` row in `reports/metrics.json`, `reports/qu.json`)
 - [ ] P5 LLM judge vs human labels (offline code merged 2026-11-16; real runs pending)
 - [ ] P6 Airflow DAG, Docker, Compose, Terraform (AWS)
 - [ ] P7 API, UI, Lambda adapter, metrics endpoint
@@ -82,6 +82,23 @@ choice barely matters; the best (`num_leaves` 63, `learning_rate` 0.1, `min_data
 70 rounds) scored 0.7391. Most important features by gain: `dense_rank`, `dense_cos`,
 `rrf_score`, `query_tokens_in_title`, `title_len`, `n_candidates` (`reports/ltr_importance.png`).
 Timing: feature build for train + val took under 2 minutes, the grid about 4 minutes.
+
+ltr_qu (ltr's config plus 6 `qu_*` features from `gemini-3.5-flash-lite`, SPEC 5.5), test split,
+2026-11-24, from `reports/qu.json` (hard queries = negation, number_or_unit or brand_in_query):
+
+| Comparison | Locale | Delta NDCG@10 | 95% CI | p | Queries |
+|---|---|---|---|---|---|
+| ltr_qu vs ltr, hard | us | +0.0115 | [0.009, 0.014] | 0.0001 | 3,606 |
+| ltr_qu vs ltr, hard | es | +0.0019 | [-0.0017, 0.0055] | 0.3177 | 1,191 |
+| ltr_qu vs ltr, hard | all | +0.0091 | [0.007, 0.0112] | 0.0001 | 4,797 |
+
+On the hard queries ltr scores 0.7278 [0.7216, 0.734] and ltr_qu 0.7369 [0.7308, 0.7429]. The gain
+is in us; es shows no measurable change. Every hard test query got an extraction (4,797 of
+4,797, none empty). LLM use: 449 calls, 323,918 input and 543,853 output tokens; no cost shown
+(prices unset). On all test queries (`reports/metrics.json`): ltr_qu 0.746 [0.7423, 0.7497],
+MRR 0.8153; vs ltr +0.004 [0.0029, 0.0051]. Biggest slice change: negation 0.599 -> 0.6249.
+The `qu_*` features rank low by gain (`reports/ltr_qu_importance.png`); the dense and RRF
+features still lead. Re-scoring ltr in the same call reproduced `ltr.parquet` byte for byte.
 
 bm25 by slice (all locales): negation 0.5624 [0.5476, 0.5772] (1,143 queries) is the weakest;
 number_or_unit 0.6582, len_6_plus 0.6717, brand_in_query 0.7235. Full table in
@@ -261,19 +278,32 @@ One line each: date, decision, reason.
   `{'ok': True}` (15 input, 9 output tokens, 0.693 s). Chosen because the larger Flash models gave
   503 or timeouts on 2026-11-16 (see above).
 
+- 2026-11-24: `ltr_qu` reuses ltr's chosen config (`num_leaves` 63, `learning_rate` 0.1,
+  `min_data_in_leaf` 200) with no grid of its own (user-approved): the 8 ltr configs were within
+  0.0014 on val, and one config keeps the paired difference about the features. It may slightly
+  favour ltr, whose config was picked for it.
+- 2026-11-24: `psr train --qu` trains ltr_qu; `psr eval --systems ltr,ltr_qu` writes the ltr_qu
+  row and `reports/qu.json` (it requires ltr in the same call, so both runs come from the same
+  code). `ltr_qu` refuses to train or score while a covered query is missing from the qu cache,
+  and `models/ltr_qu_meta.json` stores the cache's sha256 (`qu_cache_sha`), so a changed cache
+  forces a retrain.
+- 2026-11-24: `qu_present` is 1 for every hard val/test query but only for the 3,000 sampled hard
+  train queries (SPEC 5.5 cap), so in train it is not a clean hard-query flag. Kept as specified.
+- 2026-11-24: `psr qu` and `psr judge` ran at the same time (10 requests/min each, billing on). A
+  network drop made one qu batch and one judge query give up after 4 attempts; nothing was cached
+  for them, and rerunning the command filled the gap (qu: 1 extra call).
+- 2026-11-24: Judge writes a batch-check query's single-pair records only when all its pairs are
+  done, so a crash inside such a query repeats up to about 20 calls on the next run. Left as is.
+
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
 
-- `llm/client.py` gemini provider: one real call completed on 2026-11-17 (`psr llm-ping`, model
-  `gemini-3.5-flash-lite`). Batched JSON calls (`psr qu`, `psr judge`) are not yet run. The ollama
-  provider was never called.
+- `llm/client.py` ollama provider: never called (gemini ran for `psr qu` on 2026-11-24). Check:
+  `PSR_LLM_PROVIDER=ollama uv run psr llm-ping` with a local Ollama.
 - `psr judge` and `psr agreement` on real data: never run. Check: `uv run psr judge` (about 150
   batched calls plus about 660 single-pair calls; at 10 requests/min about 1.5 h, resumable),
   then `uv run psr agreement` after dense, hybrid and ltr exist. P5 then has its **STOP**.
-- `psr qu` on real data: never run. Check: `uv run psr qu --limit 40` first (2 calls), read
-  `data/llm_cache/qu.jsonl`, then `uv run psr qu` (448+ calls, about 45 min at 10 requests/min,
-  resumable).
 - CI has no judge smoke step: it needs recorded replay fixtures. Check: `uv run psr --fixtures
   judge --provider gemini --record`, commit `tests/fixtures/replay/`, then add `psr --fixtures
   judge` and `psr --fixtures agreement` to `ci.yml`.

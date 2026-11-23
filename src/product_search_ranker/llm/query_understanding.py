@@ -6,8 +6,10 @@ then left empty and counted. Results go to an append-only JSONL cache, so runs r
 The `qu_*` features below are what P3's feature table adds for the `ltr_qu` system.
 """
 
+import hashlib
 import json
 import re
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -242,3 +244,84 @@ def qu_features(qu: dict | None, product: dict, locale: str) -> dict:
             sum(w in title_words for w in type_words) / len(type_words) if type_words else 0.0
         ),
     }
+
+
+PRODUCT_COLUMNS = ["product_title", "product_brand", "product_color", "product_bullet_point"]
+
+
+def add_features(feat: pd.DataFrame, split: str, fixtures: bool = False) -> pd.DataFrame:
+    """`feat` (a `features.build` table) plus the qu_* columns from the cache, 0 without output."""
+    cache = read_cache(fixtures)
+    path = config.processed_dir(fixtures) / f"{split}.parquet"
+    df = pd.read_parquet(path, columns=["query_id", "product_id", *PRODUCT_COLUMNS])
+    keys = ["query_id", "product_id"]
+    if len(df) != len(feat) or not (df[keys].to_numpy() == feat[keys].to_numpy()).all():
+        raise SystemExit(f"features_{split} rows do not follow {path}: delete features_* and rerun")
+    with_qu = [q for q in df.query_id.unique() if (cache.get(int(q)) or {}).get("qu")]
+    rows = np.flatnonzero(df.query_id.isin(with_qu).to_numpy())
+    vals = np.zeros((len(df), len(FEATURES)))
+    locales = feat.locale.to_numpy()
+    for i, r in zip(rows, df.iloc[rows].to_dict("records"), strict=True):
+        f = qu_features(cache[int(r["query_id"])]["qu"], r, locales[i])
+        vals[i] = [f[name] for name in FEATURES]
+    return feat.join(pd.DataFrame(vals, columns=list(FEATURES), index=feat.index))
+
+
+def missing(split: str, fixtures: bool = False) -> int:
+    """Covered queries of `split` with no cache record yet (`psr qu` not finished)."""
+    cov = coverage(fixtures)
+    return int((~cov.query_id[cov.split == split].isin(read_cache(fixtures))).sum())
+
+
+def cache_sha(fixtures: bool = False) -> str:
+    path = cache_path(fixtures)
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else "none"
+
+
+def report_path(fixtures: bool = False):
+    return config.eval_reports_dir(fixtures) / "qu.json"
+
+
+def write_report(df: pd.DataFrame, runs: dict[str, pd.DataFrame], fixtures: bool = False):
+    """reports/qu.json: ltr vs ltr_qu on the hard test queries only, plus LLM usage (SPEC 5.5)."""
+    from product_search_ranker.evaluate import run as ev
+
+    sl = ev.slice_table(df)
+    hard = set(sl.query_id[sl[list(HARD_SLICES)].any(axis=1)])
+    pq = {name: runs[name][runs[name].query_id.isin(hard)] for name in ("ltr", "ltr_qu")}
+    cache = read_cache(fixtures)
+    usage = summary(coverage(fixtures), cache)
+    done = sum(s["done"] for s in usage["per_split"].values())
+    per_1k = (
+        None if usage["cost_usd"] is None or not done else round(usage["cost_usd"] / done * 1e3, 4)
+    )
+    locs = [loc for loc in config.LOCALES if (pq["ltr"].locale == loc).any()] + ["all"]
+
+    def by_loc(p, loc):
+        return p if loc == "all" else p[p.locale == loc]
+
+    report = {
+        "updated": date.today().isoformat(),
+        "git_sha": ev.git_sha(),
+        "split": "test",
+        "slice": f"hard = any of {', '.join(HARD_SLICES)}",
+        "models": sorted({m["model"] for r in cache.values() for m in r["meta"]}),
+        "hard_test_queries": len(hard),
+        "hard_test_with_output": sum(bool((cache.get(int(q)) or {}).get("qu")) for q in hard),
+        "systems": {n: {loc: ev.summary(by_loc(p, loc)) for loc in locs} for n, p in pq.items()},
+        "comparisons": [
+            {
+                "a": "ltr_qu",
+                "b": "ltr",
+                "locale": loc,
+                **ev.compare(by_loc(pq["ltr_qu"], loc), by_loc(pq["ltr"], loc)),
+            }
+            for loc in locs
+        ],  # fmt: skip
+        **usage,
+        "cost_per_1k_queries_usd": per_1k,
+    }
+    path = report_path(fixtures)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2) + "\n")
+    return path
