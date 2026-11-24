@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
-Next: **STOP: user reads `reports/judge.json`**, then chunk 5 (P6, Sonnet) (chunk 4: P4 and P5 done)
+Next: chunk 5 (P6, Sonnet). Chunk 4 done; P5 STOP closed 2026-11-24 (user read all reports)
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -29,7 +29,7 @@ Between chunks: new session, `/check`, then `/build`.
 - [x] P4 LLM client + query understanding (2026-11-24: real `psr qu` on 8,954 hard queries,
   `ltr_qu` row in `reports/metrics.json`, `reports/qu.json`)
 - [x] P5 LLM judge vs human labels (2026-11-24: 150 test queries, 3,391 pairs, `reports/judge.json`;
-  **STOP** open until the user has read it)
+  STOP closed 2026-11-24: user read it)
 - [ ] P6 Airflow DAG, Docker, Compose, Terraform (AWS)
 - [ ] P7 API, UI, Lambda adapter, metrics endpoint
 - [ ] P8 README, design notes, decision memo, UNVERIFIED complete
