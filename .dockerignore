@@ -1,0 +1,16 @@
+.git
+.venv
+.env
+.env.*
+.claude
+**/__pycache__
+.pytest_cache
+.ruff_cache
+data
+indexes
+models
+mlruns
+logs
+reports
+tests
+deploy/terraform

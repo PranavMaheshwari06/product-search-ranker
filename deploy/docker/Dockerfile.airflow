@@ -1,0 +1,24 @@
+# Airflow 3.4.0 (latest stable 3.x on Docker Hub, 2026-11-25) plus psr in its own venv.
+FROM apache/airflow:3.4.0-python3.12
+
+USER root
+COPY --from=ghcr.io/astral-sh/uv:0.9.21 /uv /usr/local/bin/uv
+
+WORKDIR /opt/psr
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src
+# CPU torch (cpu group), no dev tools; non-editable so the venv does not need /opt/psr/src.
+RUN UV_PROJECT_ENVIRONMENT=/opt/psr-venv UV_PYTHON_DOWNLOADS=never \
+    uv sync --frozen --no-default-groups --group cpu --no-editable --no-cache \
+ && rm -rf /opt/psr/src \
+ && mkdir -p /opt/psr/data /opt/psr/indexes /opt/psr/models /opt/psr/mlruns /opt/psr/reports \
+ && chown -R airflow:0 /opt/psr && chmod -R g+rwX /opt/psr
+# LightGBM's OpenMP runtime; the Airflow base image does not ship it.
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV PSR_HOME=/opt/psr \
+    HF_HOME=/opt/psr/data/hf_cache \
+    MPLCONFIGDIR=/tmp/matplotlib
+USER airflow
+WORKDIR /opt/airflow

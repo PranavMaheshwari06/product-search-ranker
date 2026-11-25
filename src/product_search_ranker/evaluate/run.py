@@ -47,14 +47,18 @@ def score_system(name: str, df: pd.DataFrame, fixtures: bool, split: str = "test
     raise SystemExit(f"unknown system {name!r}; built so far: bm25, dense, hybrid, ltr, ltr_qu")
 
 
-def runs_dir(split: str, fixtures: bool) -> Path:
+def _base(fixtures: bool, candidate: bool) -> Path:
+    return config.candidate_dir(fixtures) if candidate else config.eval_reports_dir(fixtures)
+
+
+def runs_dir(split: str, fixtures: bool, candidate: bool = False) -> Path:
     """Per-query results, kept so later systems can be compared with earlier ones."""
-    return config.eval_reports_dir(fixtures) / "runs" / split
+    return _base(fixtures, candidate) / "runs" / split
 
 
-def report_path(split: str, fixtures: bool) -> Path:
+def report_path(split: str, fixtures: bool, candidate: bool = False) -> Path:
     name = "metrics.json" if split == "test" else f"metrics_{split}.json"
-    return config.eval_reports_dir(fixtures) / name
+    return _base(fixtures, candidate) / name
 
 
 def slice_table(df: pd.DataFrame) -> pd.DataFrame:
@@ -109,18 +113,20 @@ def data_sha(fixtures: bool) -> str:
     return raw_sha()
 
 
-def evaluate(systems: list[str], split: str = "test", fixtures: bool = False) -> Path:
+def evaluate(
+    systems: list[str], split: str = "test", fixtures: bool = False, candidate: bool = False
+) -> Path:
     if "ltr_qu" in systems and "ltr" not in systems:
         raise SystemExit("ltr_qu is compared with ltr from the same call: --systems ltr,ltr_qu")
     df = load_split(split, fixtures)
-    runs = runs_dir(split, fixtures)
+    runs = runs_dir(split, fixtures, candidate)
     runs.mkdir(parents=True, exist_ok=True)
     for name in systems:
         pq = metrics.per_query(df, score_system(name, df, fixtures, split))
         pq.to_parquet(runs / f"{name}.parquet", index=False)
         print(f"wrote {runs / f'{name}.parquet'}")
 
-    path = report_path(split, fixtures)
+    path = report_path(split, fixtures, candidate)
     report = json.loads(path.read_text()) if path.exists() else {}
     report.update(
         updated=date.today().isoformat(),
@@ -162,7 +168,7 @@ def evaluate(systems: list[str], split: str = "test", fixtures: bool = False) ->
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2) + "\n")
     print(f"wrote {path}")
-    if "ltr_qu" in systems and split == "test":
+    if "ltr_qu" in systems and split == "test" and not candidate:
         from product_search_ranker.llm import query_understanding as qu
 
         print(f"wrote {qu.write_report(df, all_runs, fixtures)}")

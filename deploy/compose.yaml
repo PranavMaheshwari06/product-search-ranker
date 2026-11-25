@@ -1,0 +1,43 @@
+# Local pipeline: Airflow (standalone) runs the psr DAG; MLflow serves the runs it logs.
+# Run from the repo root: `mkdir -p data indexes models reports` (else Docker creates them as
+# root), then `AIRFLOW_UID=$(id -u) docker compose -f deploy/compose.yaml up`.
+# The API service is added in P7, with serve/app.py.
+name: psr
+
+x-psr: &psr
+  build:
+    context: ..
+    dockerfile: deploy/docker/Dockerfile.airflow
+  image: psr-airflow:local
+  # Host UID so files written to the bind mounts stay yours; the image allows any UID in group 0.
+  user: "${AIRFLOW_UID:-1000}:0"
+  environment:
+    PSR_DATA_MODE: ${PSR_DATA_MODE:-fixtures}
+    # Fixture runs publish to their own folder; set PSR_PUBLISH_TARGET when PSR_DATA_MODE is real.
+    PSR_PUBLISH_TARGET: ${PSR_PUBLISH_TARGET:-local:/opt/psr/data/fixtures_published}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    _AIRFLOW_DB_MIGRATE: "true"
+  volumes:
+    - ../data:/opt/psr/data
+    - ../indexes:/opt/psr/indexes
+    - ../models:/opt/psr/models
+    # Own store: the host mlruns/ records absolute host paths the container cannot create.
+    - mlruns:/opt/psr/mlruns
+    - ../reports:/opt/psr/reports
+    - ../tests/fixtures:/opt/psr/tests/fixtures:ro
+    - ../dags:/opt/airflow/dags:ro
+
+services:
+  airflow:
+    <<: *psr
+    command: standalone
+    ports: ["127.0.0.1:8080:8080"]
+
+  mlflow:
+    <<: *psr
+    entrypoint: ["/opt/psr-venv/bin/mlflow"]
+    command: ["server", "--backend-store-uri", "/opt/psr/mlruns", "--host", "0.0.0.0", "--port", "5000"]
+    ports: ["127.0.0.1:5000:5000"]
+
+volumes:
+  mlruns:

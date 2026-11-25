@@ -3,7 +3,7 @@
 Read this first in every session. Update it before every commit.
 
 Current stage: **L** (local WSL2 machine; the cloud session ended, so chunk 3 onward runs here)
-Next: chunk 5 (P6, Sonnet). Chunk 4 done; P5 STOP closed 2026-11-24 (user read all reports)
+Next: chunk 6 (P7, P8; Sonnet) in a new session: `/check`, then `/build`. Chunk 5 (P6) done 2026-11-25
 
 ## Chunks (one cloud session per chunk; `/build` does the first unfinished one, then stops)
 Sonnet: well-specified, self-contained work. Opus: work that has to hold many earlier modules
@@ -30,7 +30,10 @@ Between chunks: new session, `/check`, then `/build`.
   `ltr_qu` row in `reports/metrics.json`, `reports/qu.json`)
 - [x] P5 LLM judge vs human labels (2026-11-24: 150 test queries, 3,391 pairs, `reports/judge.json`;
   STOP closed 2026-11-24: user read it)
-- [ ] P6 Airflow DAG, Docker, Compose, Terraform (AWS)
+- [x] P6 Airflow DAG, Docker, Compose, Terraform (AWS) (2026-11-25: image builds; `airflow dags
+  test psr_daily 2026-01-01` in Compose succeeded twice on the fixture, 134 s and 112 s wall time
+  including container start: run 1 gate "first run", run 2 gate against run 1's published
+  metrics; import errors empty; terraform fmt/validate and actionlint ok; logs in `logs/p6_*`)
 - [ ] P7 API, UI, Lambda adapter, metrics endpoint
 - [ ] P8 README, design notes, decision memo, UNVERIFIED complete
 
@@ -320,6 +323,34 @@ One line each: date, decision, reason.
 - 2026-11-24: P5 had no code changes (judge and agreement code merged 2026-11-16 and reviewed
   then), so no reviewer run this phase; gates ran on the real outputs.
 
+- 2026-11-25: P6 plan cut to what the SPEC needs. `psr eval --candidate` writes under
+  `<reports>/candidate/` (git-ignored), so the committed `metrics.json` and runs never change;
+  `psr gate` compares it with `published_metrics.json` at `--target` (default
+  `PSR_PUBLISH_TARGET`), margin `PSR_GATE_MARGIN` (0.005); a missing published file passes.
+- 2026-11-25: `published_metrics.json` is a copy of the candidate metrics, not
+  `reports/metrics.json` (SPEC 11), so the next gate compares against what the DAG itself measured.
+- 2026-11-25: No `embed` task in the DAG: fixtures mode embeds on demand (`dense.DenseIndex`);
+  real mode uses the precomputed GPU embeddings (5.8 h on CPU, too slow for a daily task).
+- 2026-11-25: `psr fetch` is a no-op in fixtures mode, so the Compose DAG run downloads no data.
+- 2026-11-25: Airflow `apache/airflow:3.4.0-python3.12` (latest stable 3.x tag on Docker Hub);
+  BashOperator from `airflow.providers.standard.operators.bash`, `DAG` from `airflow.sdk`
+  (upstream example DAG). psr lives in its own venv `/opt/psr-venv` (cpu group, `uv sync
+  --frozen`), so Airflow's constraints never meet mlflow/torch pins. The MLflow service reuses
+  that image. `Dockerfile.api`, the `api` service and `Dockerfile.lambda` move to P7, which
+  builds `serve/`. Compose runs as `AIRFLOW_UID` (default 1000) in group 0; ports bound to
+  127.0.0.1; e5 cache at `data/hf_cache`.
+
+- 2026-11-25: P6 review (python, silent-failure, security; Sonnet). Fixed: `published_metrics.json`
+  is uploaded last; publish refuses candidate metrics older than `models/ltr.txt` or without an
+  ltr NDCG@10; the gate rejects NaN and a negative margin; `local:` targets must be absolute;
+  Compose fixture runs publish to `data/fixtures_published`; Compose MLflow uses its own `mlruns`
+  volume (host `mlruns/` stores absolute host paths the container cannot create); image adds
+  `libgomp1` (LightGBM); CI `permissions: contents: read`; Lambda `reserved_concurrency`
+  (default 5, -1 for new accounts with a 10-run quota); S3 noncurrent versions expire after 30 d.
+  Accepted, not fixed: each publish becomes the next baseline, so dips inside the margin can add
+  up (SPEC 11 wording); `train` overwrites the local model and `reports/ltr_importance.png` before
+  the gate (only the published copy is gated); actions and base image pinned by tag, not digest.
+
 ## UNVERIFIED
 Things written but not run. Each line: file, what is unverified, how to check. Delete the line
 when it is confirmed or fixed.
@@ -329,6 +360,12 @@ when it is confirmed or fixed.
 - CI has no judge smoke step: it needs recorded replay fixtures. Check: `uv run psr --fixtures
   judge --provider gemini --record`, commit `tests/fixtures/replay/`, then add `psr --fixtures
   judge` and `psr --fixtures agreement` to `ci.yml`.
+
+- `deploy/terraform/aws`: hashicorp/aws `~> 6.28` (locked 6.74.0). From 6.28 the provider adds
+  both public function-URL permissions itself (`lambda_function_url` docs), so none are declared.
+  Check in L3: the live URL answers. S3 and ECR have no force_destroy, so `destroy` needs them empty.
+- `pipeline/publish.py` S3 path: tested with a fake client only. Check in L3 with
+  `psr publish --target s3://<bucket>/models --dry-run`, then without `--dry-run`.
 
 ## Blockers
 Anything that stopped progress twice in a row, with what was tried.

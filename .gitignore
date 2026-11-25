@@ -13,3 +13,5 @@ __pycache__/
 *.tfstate.*
 .terraform/
 *.tfvars
+# psr eval --candidate output; the gate reads it, it is never a committed result
+/reports/candidate/

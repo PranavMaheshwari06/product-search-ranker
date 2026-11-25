@@ -55,6 +55,15 @@ def eval_reports_dir(fixtures: bool = False) -> Path:
     return root() / "data" / "fixtures_reports" if fixtures else reports_dir()
 
 
+def candidate_dir(fixtures: bool = False) -> Path:
+    """`eval --candidate` output (git-ignored): the gate reads it, the committed report stays."""
+    return eval_reports_dir(fixtures) / "candidate"
+
+
+def gate_margin() -> float:
+    return float(os.environ.get("PSR_GATE_MARGIN", "0.005"))
+
+
 def indexes_dir(fixtures: bool = False) -> Path:
     return root() / "indexes" / ("fixtures" if fixtures else "")
 

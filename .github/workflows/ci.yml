@@ -2,6 +2,9 @@ name: ci
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   python:
     runs-on: ubuntu-latest
@@ -17,5 +20,12 @@ jobs:
       - run: uv run pytest -q
       - run: uv run psr --fixtures eval --systems bm25
       # The `psr --fixtures train` smoke step and `ltr` in the eval step are added in P3.
-      # The terraform job (fmt, init -backend=false, validate) is added in P6, once
-      # deploy/terraform/aws exists: `hashFiles` is not allowed in a job-level `if`.
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=deploy/terraform/aws fmt -check
+      - run: terraform -chdir=deploy/terraform/aws init -backend=false
+      - run: terraform -chdir=deploy/terraform/aws validate
